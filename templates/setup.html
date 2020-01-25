@@ -1,0 +1,51 @@
+{{ template "header" . }}
+
+  <div id="page_content">
+
+	<div class="left_side_bar"> 
+
+    </div>
+
+    <div class="right_section">
+      <div class="common_content">
+        <h2>Setup Admin User </h2>
+        <hr>
+		{{if .IsInvalid}}
+	  	<p id=errormessage>{{.ErrorMsg}}</p>
+		{{end}}
+		<form method=POST>
+		<table style='border-collapse: collapse; border: none;' >
+		<tr>
+		  <td>Login</td>
+		  <td><input type=text name=login id=login /></td>
+		</tr>
+		
+		<tr>
+		  <td>Password</td>
+		  <td><input type="password" name="password" /></td>	
+		</tr>
+
+		<tr>
+		  <td>Confirm Password</td>
+		  <td><input type="password" name="confirmpassword" /></td>	
+		</tr>
+		<tr>
+				  
+		  <td><input type=submit name=setup value='Setup' class="button" /></td>
+		</tr>
+		</table>
+		
+			
+		</form>
+        <p>
+	
+  </div>
+
+</div>
+
+<script>
+  document.getElementById('login').focus();
+</script>
+
+</body>
+</html>

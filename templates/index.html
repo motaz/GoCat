@@ -1,0 +1,98 @@
+
+
+{{ template "header" . }}
+
+   <div id="page_content">
+
+{{ template "menu" . }}
+
+
+
+<p id="{{.Class}}">
+{{.Message}}
+</p>
+
+{{if .NeedRefresh}}
+<script>
+  setTimeout(function () { 
+    window.location = window.location.href;
+ }, 2500);
+</script>
+{{end}}
+    <div class="right_section">
+      <div class="common_content">
+        <h2>Web Applications</h2>
+		<table class='bordertable'>
+		<tr style='background:#aaaa88;'><th>Application</th><th>Port</th>
+		<th>Update Time</th><th>Status</th><th>Run</th><th>Stop</th></tr>
+		{{range .Apps}}
+		  <tr>
+		  <form method=POST>
+		  <input type=hidden name=appname value={{.Filename}} />
+		  <td><a href="/app?appname={{.Filename}}"> {{.Filename}}</a></td> 
+		  <td><a href="{{.Address}}" target="_blank">{{.Port}}</td> 
+		
+		  <td>{{.FileTime}}</td>
+		
+          <td 
+  		  {{if .IsRunning}}
+		  style='color:green';
+		  {{else}}
+		  style='color:red'
+		  {{end}}
+		  >
+
+		  {{.Running}}</td>
+		
+		  <td>
+		  {{if not .IsRunning}}
+		  <input type=submit name=start value="Start" class="button" />
+		  {{end}}
+		
+		  </td>
+		
+		  <td>
+		  {{if .IsRunning}}
+		  <input type=submit name=stop value="Stop" class = "redbutton" />
+		  {{end}}
+		
+		
+  		</td>
+ 		</form>
+		</tr>
+		{{end}}
+		</table>
+        <hr>
+		<h2>Shelf</h2>
+		<table>
+		{{range .ShelfApps}}
+		<tr><td>{{.}}<br/>
+		    <td>
+			<form method=POST>
+			<input type=hidden name=appname value="{{.}}" />
+			<input type=submit name=action value="replace"/>
+			</form>
+			</td>
+		</tr>
+		{{end}}
+		</table>
+		<hr/>
+        
+		<form method=POST enctype="multipart/form-data">
+		<h3>Upload Application</h3>
+		Port <input type=text name=port size=20 /><br/>
+		<input type=checkbox name=shelf value=1 /> Upload to Shelf<br/><br/>
+		<input type=file name="file" class=button />
+		
+		<input type=submit name="upload" value="&emsp; Upload &emsp; " class=button />
+		</form>
+		
+        </div>
+		</div>
+   {{template "footer"}}
+	
+  </div>
+
+</div>
+
+</body></html>
