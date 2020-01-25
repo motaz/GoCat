@@ -1,5 +1,5 @@
 # gocat
-#Golang web services and web apps uploader
+-Golang web services and web apps uploader
 
 run and open in http://localhost:2009
 
