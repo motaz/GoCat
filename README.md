@@ -1,10 +1,11 @@
 # gocat
 <h3>Golang web services and web apps uploader</h3>
+GoCat manages your Golang web services and web apps
+It is similar to Tomcat, but it is not a web container or web server for your applications, it only uploads, initializes start script, run, and stop your web services/web applications
 
 run and open in http://localhost:2009
 
-Upload your Golang web services and web applications, set web service/web app port number before uploading
-You can start/stop web services, and upload new versions
+
 
 <b>License</b>
 LGPL
