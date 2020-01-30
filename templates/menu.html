@@ -6,8 +6,8 @@
 <meta charset="UTF-8">
 <title>GoCat</title>
 <meta name="description" content="GoLan web services and web applications uploader">
-<link rel="shortcut icon" href="/static/images/golang.png" />            
-<link href="/static/css/style.css" rel="stylesheet" type="text/css">
+<link rel="shortcut icon" href="/gocat/static/images/golang.png" />            
+<link href="/gocat/static/css/style.css" rel="stylesheet" type="text/css">
 </head>
 <body>
 
@@ -17,16 +17,16 @@
 
     <div class="top_banner">
 	<table ><tr>
-	<td><img src="/static/images/golang.png" ></td>
+	<td><img src="/gocat/static/images/golang.png" ></td>
      <td> <h2>GoCat</h2></td>
 	{{ if .Login }}
 	<td></td>
 	<td>User:<font color=blue>{{.Login}}</font></td>
 	
 	<td></td>
-	<td><a href="/logout">Logout</td>
+	<td><a href="/gocat/logout">Logout</td>
 	{{end}}
-	<td>1.0.6</td>
+	<td>1.0.7</td>
 	</tr>
 	
 	</table>
@@ -40,7 +40,7 @@
   {{define "menu"}}
 	<div class="navigation">
       <ul>
-        <li><a href="/">Home</a></li>
+        <li><a href="/gocat">Home</a></li>
 		<li>Linux user: {{.Linuxuser}}</li>
 
       </ul>
@@ -51,7 +51,7 @@
 	{{define "footer"}}
     <div class="clear"></div>
     
-    <div id="footer">Copyright &copy; 2018 2019. Developed by 
+    <div id="footer">Copyright &copy; 2018 2020. Developed by 
        <a href="http://www.code.sd" target="_blank">Code.sd</a><br>
 	
     </div>

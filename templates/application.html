@@ -36,10 +36,10 @@
 		{{range .Files}}
 		<tr>
 		{{if .IsDir}}
-		<td><a href="/app?appname={{$name}}/{{.FileName}}"> {{.FileName}}</a></td>  
+		<td><a href="/gocat/app?appname={{$name}}/{{.FileName}}"> {{.FileName}}</a></td>  
 		
 		{{else}}
-		  <td><a href="/download?filename={{$name}}/{{.FileName}}"> {{.FileName}}</a></td>
+		  <td><a href="/gocat/download?filename={{$name}}/{{.FileName}}"> {{.FileName}}</a></td>
 		{{end}}
 		  <td>{{.FileTime}}</td>
 		  <td>{{.Size}}</td>

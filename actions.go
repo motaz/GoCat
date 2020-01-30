@@ -46,7 +46,7 @@ func checkSession(w http.ResponseWriter, r *http.Request) (bool, string) {
 	}
 	if !valid {
 
-		http.Redirect(w, r, "/login", 307)
+		http.Redirect(w, r, "/gocat/login", 307)
 	}
 
 	return valid, login
@@ -62,7 +62,7 @@ func login(w http.ResponseWriter, r *http.Request) {
 
 	user := getConfigValue("user", "")
 	if user == "" {
-		http.Redirect(w, r, "/setup", 307)
+		http.Redirect(w, r, "/gocat/setup", 307)
 
 	} else {
 		var result OutputData
@@ -70,7 +70,7 @@ func login(w http.ResponseWriter, r *http.Request) {
 		if r.FormValue("submitlogin") != "" {
 			if checkLogin(r.FormValue("login"), r.FormValue("password")) {
 				setCookies(w, r)
-				w.Write([]byte("<script>document.location='/';</script>"))
+				w.Write([]byte("<script>document.location='/gocat/';</script>"))
 
 			} else {
 				result.ErrorMsg = "Invalid username/and or password"
@@ -87,7 +87,7 @@ func login(w http.ResponseWriter, r *http.Request) {
 func setup(w http.ResponseWriter, r *http.Request) {
 
 	if codeutils.IsFileExists("gocat.ini") {
-		http.Redirect(w, r, "/login", 307)
+		http.Redirect(w, r, "/gocat/login", 307)
 
 	} else {
 		var result OutputData
@@ -100,7 +100,7 @@ func setup(w http.ResponseWriter, r *http.Request) {
 				codeutils.SetConfigValue("gocat.ini", "user", r.FormValue("login"))
 				passwordhash := GetMD5Hash(r.FormValue("password"))
 				codeutils.SetConfigValue("gocat.ini", "password", passwordhash)
-				http.Redirect(w, r, "/login", 307)
+				http.Redirect(w, r, "/gocat/login", 307)
 
 			}
 		}
@@ -218,6 +218,6 @@ func logout(w http.ResponseWriter, r *http.Request) {
 	expiration := time.Now()
 	cookie := http.Cookie{Name: "gocatsession", Value: "-", Expires: expiration}
 	http.SetCookie(w, &cookie)
-	http.Redirect(w, r, "/login", 307)
+	http.Redirect(w, r, "/gocat/login", 307)
 
 }
