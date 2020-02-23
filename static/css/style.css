@@ -31,6 +31,17 @@ html, body, div, span, applet, object, iframe, h1, h2, h3, h4, h5, h6, p, blockq
     cursor:pointer;
 }
 
+.bluebutton {
+    font-family: Arial, Helvetica, sans-serif;
+    margin-left: 5px;
+    text-shadow: #000 -1px -1px 1px;
+    background-color: #7755FF;
+    color: #FFF;
+    border:1px solid #666;
+    font-weight:bold;
+    cursor:pointer;
+}
+
 ol, ul {
 	list-style-type:none;
 }
@@ -367,7 +378,7 @@ a.btn:hover{
 	text-decoration:none;
 }
 
-#infomessage, #warnmessage, #errormessage {
+#infomessage, #warnmessage, #errormessage , #bluemessage, #redmessage{
     margin-bottom: 1.5em;
     padding: 0.3em;
     font-weight: bold;
@@ -382,6 +393,21 @@ a.btn:hover{
   color: #390;
   background: #CFC;
 }
+
+#bluemessage {
+  background-color: #7777AA;
+  border-color: #390;
+  color: black;
+  background: #CCF;
+}
+
+#redmessage {
+  background-color: fuchsia;
+  border-color: fuchsia;
+  color: black;
+  background: #FDD;
+}
+
 
 #errormessage {
     border-color: #903;

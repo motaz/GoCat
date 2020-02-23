@@ -56,7 +56,7 @@ func replaceApp(r *http.Request, indexTemplate *IndexTemplate) {
 
 		indexTemplate.Message = "Application replaced: " + appname
 
-		indexTemplate.Class = "infomessage"
+		indexTemplate.Class = "bluemessage"
 		os.Remove(sourceFile)
 	} else {
 
@@ -102,8 +102,10 @@ func startAndstopApp(actionType StartStopType, r *http.Request, indexTemplate *I
 	var label string
 	if actionType == START {
 		label = "started"
+		indexTemplate.Class = "infomessage"
 	} else {
 		label = "stopped"
+		indexTemplate.Class = "redmessage"
 	}
 	if isActionHappening(actionType, appname) {
 		indexTemplate.Message = appname + " is already " + label
@@ -121,7 +123,6 @@ func startAndstopApp(actionType StartStopType, r *http.Request, indexTemplate *I
 		if err == "" {
 
 			indexTemplate.Message = appname + " has " + label + "\n" + out
-			indexTemplate.Class = "infomessage"
 			time.Sleep(time.Second * 2)
 
 		} else {

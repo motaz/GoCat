@@ -62,7 +62,10 @@ func listApplications(w http.ResponseWriter, r *http.Request) []AppInfo {
 	if err == nil {
 
 		address := "http://" + r.Host
-		address = address[:strings.LastIndex(address, ":")]
+		if strings.Contains(r.Host, ":") {
+			address = address[:strings.LastIndex(address, ":")]
+		}
+
 		var list []AppInfo
 		for _, f := range files {
 			if f.IsDir() {
@@ -180,7 +183,6 @@ func isAppRunning(appname string) bool {
 
 	exist := false
 
-	//fmt.Printf("%s", out.String())
 	lines := strings.Split(out.String(), "\n")
 	for i := 0; i < len(lines); i++ {
 		if (strings.Contains(lines[i], appname)) && (!strings.Contains(lines[i], "grep")) &&
