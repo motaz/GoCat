@@ -65,6 +65,7 @@ func login(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/gocat/setup", 307)
 
 	} else {
+		w.Header().Add("X-Frame-Options", "SAMEORIGIN")
 		var result OutputData
 		result.IsInvalid = false
 		if r.FormValue("submitlogin") != "" {

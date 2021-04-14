@@ -8,6 +8,7 @@ import (
 )
 
 func index(w http.ResponseWriter, r *http.Request) {
+	w.Header().Add("X-Frame-Options", "SAMEORIGIN")
 
 	valid, login := checkSession(w, r)
 	if valid {

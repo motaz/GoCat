@@ -21,7 +21,7 @@ func main() {
 	http.HandleFunc("/gocat/app", app)
 	http.HandleFunc("/gocat/download", download)
 	http.HandleFunc("/gocat/logout", logout)
-	fs := http.FileServer(http.Dir("static"))
+	fs := SetCacheHeader(http.FileServer(http.Dir("static")))
 
 	http.Handle("/gocat/static/", http.StripPrefix("/gocat/static/", fs))
 	port := getConfigValue("port", ":2009")
@@ -34,6 +34,14 @@ func main() {
 		println("Error: " + err.Error())
 	}
 
+}
+
+func SetCacheHeader(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Add("X-Frame-Options", "SAMEORIGIN")
+
+		h.ServeHTTP(w, r)
+	})
 }
 
 func redirectToIndex(w http.ResponseWriter, r *http.Request) {
