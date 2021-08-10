@@ -6,6 +6,7 @@ import (
 	"mime/multipart"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/motaz/codeutils"
@@ -74,21 +75,29 @@ func upload(w http.ResponseWriter, r *http.Request, indexTemplate *IndexTemplate
 		indexTemplate.Class = "errormessage"
 
 	} else {
-
+		aname := handler.Filename
+		ex := filepath.Ext(aname)
+		if ex == ".gz" || ex == ".zip" {
+			aname = aname[:strings.Index(aname, ex)]
+		}
 		// Put file in location
-		var dir string
+		var dir, adir string
 		if toShelf {
 			dir = getAppDir() + "shelf.dir/"
+			adir = dir
 		} else {
 			dir = getAppDir() + handler.Filename + "/"
+			adir = getAppDir() + aname + "/"
 		}
-		if !codeutils.IsFileExists(dir) {
-			os.MkdirAll(dir, os.ModePerm)
+
+		if !codeutils.IsFileExists(adir) {
+			os.MkdirAll(adir, os.ModePerm)
 		}
-		afilename := dir + handler.Filename
+		afilename := adir + handler.Filename
+		println("Uplaining ", afilename)
 		{
 			// App Info
-			infoFilename := afilename + ".json"
+			infoFilename := adir + aname + ".json"
 			port := r.FormValue("port")
 			if port == "" {
 				_, port = getPort(infoFilename)
@@ -103,7 +112,7 @@ func upload(w http.ResponseWriter, r *http.Request, indexTemplate *IndexTemplate
 			if err == nil {
 				if !toShelf {
 
-					err = writeStartScript(dir, handler.Filename)
+					err = writeStartScript(adir, aname)
 				}
 
 				copyAndPutFile(afilename, indexTemplate, file, handler.Filename,
@@ -111,8 +120,8 @@ func upload(w http.ResponseWriter, r *http.Request, indexTemplate *IndexTemplate
 
 			}
 
-			if !toShelf && isAlreadyRunning && !isAppRunning(handler.Filename) {
-				runApp(handler.Filename)
+			if !toShelf && isAlreadyRunning && !isAppRunning(aname) {
+				runApp(aname)
 			}
 		}
 
@@ -120,6 +129,7 @@ func upload(w http.ResponseWriter, r *http.Request, indexTemplate *IndexTemplate
 }
 
 func writeStartScript(dir string, filename string) error {
+
 	scriptFileName := dir + "start.sh"
 	script := "#!/bin/bash\n" +
 		"cd " + dir + "\n" +
@@ -160,6 +170,26 @@ func copyAndPutFile(fullfilename string, indexTemplate *IndexTemplate,
 		err = copyFile(fullfilename+".tmp", fullfilename)
 
 		if err == nil {
+			ex := filepath.Ext(fullfilename)
+
+			if ex == ".gz" || ex == ".zip" {
+				println("Has ", ex)
+				var command string
+				if ex == ".gz" {
+					command = "gunzip"
+				} else if ex == ".zip" {
+					command = "unzip -o -d " + filepath.Dir(fullfilename)
+				}
+				result, err := runShell(Run, "/bin/sh", "-c", command+" "+fullfilename)
+				if ex == ".zip" {
+
+					os.Remove(fullfilename)
+				}
+				println(result)
+				if err != "" {
+					println("Error while uncompress: ", err)
+				}
+			}
 			if toShelf {
 				indexTemplate.Message = "File uploaded to shelf: " + onlyfilename
 			} else {

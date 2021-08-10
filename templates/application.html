@@ -7,7 +7,6 @@
 {{ template "menu" . }}
 
 
-
     <div class="right_section">
       <div class="common_content">
         <h2>{{.AppName}}</h2>
@@ -29,9 +28,33 @@
 {{end}}
 
 <a href="javascript:history.back()">..Back</a>
+
+{{if .Editing}}
+<br/>
+editing <b>{{.EditFileName}}</b>
+<form method=post action="/gocat/app?appname={{.AppName}}">
+    <input type=hidden name=editfile value="{{.EditFileName}}" >
+
+<textarea name=content rows=15 cols=60>{{.Content}}</textarea>
+<br/>
+<input type=submit name=save value='Save' class="bluebutton" />
+<input type=submit name=cancel value='Cancel' class=button />
+
+</form>
+{{end}}
+
+{{if .RemoveFile}}
+		<form method=post action='/gocat/app?appname={{.AppName}}'>"
+		Remove <b>{{.RemoveFileName}}</b>
+        <input type=hidden name=removefilename value="{{.RemoveFileName}}" >
+
+		<input type=submit name=confirmremove value='Yes' class=redbutton />
+		<input type=submit name=cancel value='Cancel' class=button />
+		</form>
+{{end}}
 		<table>
-		<tr style='background:#aaaa88;'><th>File</th><th>File Time</th>
-		  <th>File Size</th></tr>
+		<tr style='background:#aaaa88;'><th>File</th><th>Edit</th><th>File Time</th>
+		  <th>File Size</th><th>Delete</th></tr>
 {{$name := .AppName}}		
 		{{range .Files}}
 		<tr>
@@ -41,8 +64,22 @@
 		{{else}}
 		  <td><a href="/gocat/download?filename={{$name}}/{{.FileName}}"> {{.FileName}}</a></td>
 		{{end}}
+    <td>
+    {{ if .IsEdit}}
+    <form method=POST action="/gocat/app?appname={{$name}}">
+    <input type=hidden name=editfile value="{{.FileName}}" >
+    <input type=submit name=edit value=Edit class='bluebutton' />
+    </form>
+    {{end}}
+    </td>
 		  <td>{{.FileTime}}</td>
 		  <td>{{.Size}}</td>
+      <td>   
+         <form method=POST action="/gocat/app?appname={{$name}}">
+    <input type=hidden name=editfile value="{{.FileName}}" >
+    <input type=submit name=remove value=Remove class="redbutton" />
+    </form>
+    </td>
 		</tr>
 		{{end}}
 		</table>

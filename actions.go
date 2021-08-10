@@ -2,7 +2,9 @@ package main
 
 import (
 	"bufio"
+	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"strings"
@@ -145,6 +147,54 @@ type ApplicationInfo struct {
 
 	HasUpload     bool
 	UploadedFiles []UploadedFileInfo
+
+	Editing      bool
+	EditFileName string
+	Content      string
+
+	RemoveFile     bool
+	RemoveFileName string
+}
+
+func removeFile(dir string, w http.ResponseWriter, r *http.Request) {
+
+	if r.FormValue("confirmremove") != "" {
+		err := os.Remove(dir + "/" + r.FormValue("removefilename"))
+		if err != nil {
+			fmt.Fprintf(w, "<p id=errormessage>%s</p>", err.Error())
+		} else {
+			fmt.Fprintf(w, "<p id=infomessage>File removed: %s</p>", r.FormValue("removefilename"))
+		}
+	}
+}
+
+func saveFile(dir string, applicationInfo *ApplicationInfo, w http.ResponseWriter, r *http.Request) {
+
+	if r.FormValue("save") != "" {
+		err := WriteToFile(dir+"/"+r.FormValue("editfile"), r.FormValue("content"))
+		applicationInfo.Editing = false
+		if err != nil {
+			fmt.Fprintf(w, "<p id=errormessage>%s</p>", err.Error())
+		} else {
+			fmt.Fprintf(w, "<p id=infomessage>File saved: %s</p>", r.FormValue("editfile"))
+		}
+
+	}
+}
+
+func editFile(dir string, applicationInfo *ApplicationInfo, w http.ResponseWriter, r *http.Request) {
+
+	if r.FormValue("edit") != "" {
+		applicationInfo.Editing = true
+		applicationInfo.EditFileName = r.FormValue("editfile")
+		content, err := ioutil.ReadFile(dir + "/" + applicationInfo.EditFileName)
+		if err != nil {
+			println(err.Error())
+		}
+		applicationInfo.Content = string(content)
+
+	}
+
 }
 
 func app(w http.ResponseWriter, r *http.Request) {
@@ -165,6 +215,7 @@ func app(w http.ResponseWriter, r *http.Request) {
 	}
 	appname := r.FormValue("appname")
 	dir := getAppDir() + appname
+	removeFile(dir, w, r)
 	files := listFiles(dir, w)
 
 	applicationInfo.AppName = appname
@@ -172,6 +223,15 @@ func app(w http.ResponseWriter, r *http.Request) {
 	applicationInfo.IsSubFolder = strings.Contains(appname, "/")
 
 	applicationInfo.Files = files
+
+	editFile(dir, &applicationInfo, w, r)
+	saveFile(dir, &applicationInfo, w, r)
+	if r.FormValue("remove") != "" {
+		applicationInfo.RemoveFile = true
+		applicationInfo.RemoveFileName = r.FormValue("editfile")
+
+	}
+
 	err := mytemplate.ExecuteTemplate(w, "application.html", applicationInfo)
 	if err != nil {
 		w.Write([]byte("Error: " + err.Error()))
@@ -179,11 +239,26 @@ func app(w http.ResponseWriter, r *http.Request) {
 
 }
 
+func WriteToFile(filename string, data string) error {
+
+	file, err := os.Create(filename)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	_, err = io.WriteString(file, data)
+	if err != nil {
+		return err
+	}
+	return file.Sync()
+}
+
 func download(w http.ResponseWriter, r *http.Request) {
 
 	filename := r.FormValue("filename")
 	filename = getAppDir() + filename
-	println(filename)
+
 	file, e := os.Open(filename)
 	if e != nil {
 		w.Header().Add("Content-Type", "text/html;charset=UTF-8")
@@ -195,7 +270,6 @@ func download(w http.ResponseWriter, r *http.Request) {
 	} else {
 		onlyname := filename[strings.LastIndex(filename, "/"):]
 		w.Header().Set("Content-Disposition", "attachment; filename="+onlyname)
-		//w.Header().Set("Content-Type", "image/png")
 
 		read := bufio.NewReader(file)
 

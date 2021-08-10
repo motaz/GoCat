@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -23,6 +24,7 @@ type FileInfo struct {
 	Size     string
 	FileTime string
 	IsDir    bool
+	IsEdit   bool
 }
 
 func writeToFile(filename string, contents string) error {
@@ -134,6 +136,7 @@ func listFiles(dir string, w http.ResponseWriter) []FileInfo {
 
 		var afile FileInfo
 		afile.FileName = f.Name()
+
 		afile.FileTime = f.ModTime().String()
 		if f.Size() < 1024 {
 			afile.Size = fmt.Sprintf("%d", f.Size())
@@ -145,6 +148,9 @@ func listFiles(dir string, w http.ResponseWriter) []FileInfo {
 		}
 
 		afile.IsDir = f.IsDir()
+
+		ext := filepath.Ext(f.Name())
+		afile.IsEdit = !afile.IsDir && ext != ""
 		list = append(list, afile)
 
 	}
