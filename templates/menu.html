@@ -26,7 +26,9 @@
 	<td></td>
 	<td><a href="/gocat/logout">Logout</a></td>
 	{{end}}
-	<td>1.0.10</td>
+  {{ if .Version }}
+	<td>{{.Version}}</td>
+  {{end}}
 	</tr>
 	
 	</table>

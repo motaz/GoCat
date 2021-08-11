@@ -11,3 +11,6 @@ run and open in http://localhost:2009
 LGPL
 
 <img src='gocat.png' />
+
+Code For Computer Software
+2018-2021

@@ -277,3 +277,7 @@ func stopIfRunning(filename string, toShelf bool) (isAlreadyRunning bool) {
 	}
 	return
 }
+
+func writeToLog(event string) {
+	codeutils.WriteToLog(event, "gocat")
+}

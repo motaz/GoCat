@@ -8,12 +8,14 @@ import (
 )
 
 func index(w http.ResponseWriter, r *http.Request) {
+
 	w.Header().Add("X-Frame-Options", "SAMEORIGIN")
 
 	valid, login := checkSession(w, r)
 	if valid {
 		var indexTemplate IndexTemplate
 		indexTemplate.Login = login
+		indexTemplate.Version = VERSION
 		indexTemplate.Linuxuser = getLinuxUser()
 		var list []AppInfo
 
@@ -64,6 +66,7 @@ func replaceApp(r *http.Request, indexTemplate *IndexTemplate) {
 		indexTemplate.Message = "Error replacing file: " + appname + ": " + err.Error()
 		indexTemplate.Class = "errormessage"
 	}
+	writeToLog(indexTemplate.Message)
 	if isAlreadyRunning {
 		runApp(appname)
 
@@ -130,6 +133,7 @@ func startAndstopApp(actionType StartStopType, r *http.Request, indexTemplate *I
 			indexTemplate.Message = "Error: " + err
 			indexTemplate.Class = "errormessage"
 		}
+		writeToLog(indexTemplate.Message + ", from : " + r.RemoteAddr)
 	}
 
 }

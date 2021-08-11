@@ -7,6 +7,8 @@ import (
 	"strings"
 )
 
+const VERSION = "1.0.12"
+
 var mytemplate *template.Template
 
 func main() {
@@ -25,6 +27,7 @@ func main() {
 
 	http.Handle("/gocat/static/", http.StripPrefix("/gocat/static/", fs))
 	port := getConfigValue("port", ":2009")
+	println("GoCat version: ", VERSION)
 	println("Listening on port: ", port)
 	if !strings.Contains(port, ":") {
 		port = ":" + port

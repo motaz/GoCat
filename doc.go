@@ -1,6 +1,9 @@
 // GoCat project doc.go
 
 /*
-GoCat document
+  Developed by Code for Computer Software
+  www.code.sd
+  2018-2021
 */
+
 package main

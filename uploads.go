@@ -43,7 +43,7 @@ func uploadfiles(w http.ResponseWriter, r *http.Request) []UploadedFileInfo {
 		_, err := io.Copy(f, file)
 		var uploadedFile UploadedFileInfo
 		uploadedFile.Filename = filename
-
+		writeToLog("Uploading: " + afilename)
 		if err == nil {
 			uploadedFile.Message = "has been uploaded succesfully"
 			uploadedFile.Success = true
@@ -51,7 +51,7 @@ func uploadfiles(w http.ResponseWriter, r *http.Request) []UploadedFileInfo {
 			uploadedFile.Message = "Error in upload: " + err.Error()
 			uploadedFile.Success = false
 		}
-
+		writeToLog(uploadedFile.Message)
 		result = append(result, uploadedFile)
 
 	}
@@ -94,7 +94,7 @@ func upload(w http.ResponseWriter, r *http.Request, indexTemplate *IndexTemplate
 			os.MkdirAll(adir, os.ModePerm)
 		}
 		afilename := adir + handler.Filename
-		println("Uplaining ", afilename)
+		writeToLog("Uploading application: " + afilename)
 		{
 			// App Info
 			infoFilename := adir + aname + ".json"
@@ -180,14 +180,14 @@ func copyAndPutFile(fullfilename string, indexTemplate *IndexTemplate,
 				} else if ex == ".zip" {
 					command = "unzip -o -d " + filepath.Dir(fullfilename)
 				}
-				result, err := runShell(Run, "/bin/sh", "-c", command+" "+fullfilename)
+				_, err := runShell(Run, "/bin/sh", "-c", command+" "+fullfilename)
 				if ex == ".zip" {
 
 					os.Remove(fullfilename)
 				}
-				println(result)
+
 				if err != "" {
-					println("Error while uncompress: ", err)
+					writeToLog("Error while uncompress: " + err)
 				}
 			}
 			if toShelf {
@@ -201,6 +201,7 @@ func copyAndPutFile(fullfilename string, indexTemplate *IndexTemplate,
 
 			indexTemplate.Message = "Error uploading file: " + onlyfilename + ": " + err.Error()
 			indexTemplate.Class = "errormessage"
+			writeToLog(indexTemplate.Message)
 		}
 	}
 }

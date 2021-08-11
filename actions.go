@@ -14,6 +14,7 @@ import (
 )
 
 type IndexTemplate struct {
+	Version     string
 	Message     string
 	Class       string
 	NeedRefresh bool
@@ -47,6 +48,7 @@ func checkSession(w http.ResponseWriter, r *http.Request) (bool, string) {
 
 	}
 	if !valid {
+		writeToLog("Invalid session, redrecting to login, from: " + r.RemoteAddr)
 
 		http.Redirect(w, r, "/gocat/login", 307)
 	}
@@ -58,6 +60,7 @@ type OutputData struct {
 	IsInvalid bool
 	ErrorMsg  string
 	Login     string
+	Version   string
 }
 
 func login(w http.ResponseWriter, r *http.Request) {
@@ -70,14 +73,17 @@ func login(w http.ResponseWriter, r *http.Request) {
 		w.Header().Add("X-Frame-Options", "SAMEORIGIN")
 		var result OutputData
 		result.IsInvalid = false
+		result.Version = VERSION
 		if r.FormValue("submitlogin") != "" {
 			if checkLogin(r.FormValue("login"), r.FormValue("password")) {
-				setCookies(w, r)
+				setLoginCookies(w, r)
 				w.Write([]byte("<script>document.location='/gocat/';</script>"))
+				writeToLog("Successful login for " + r.FormValue("login") + ", from: " + r.RemoteAddr)
 
 			} else {
 				result.ErrorMsg = "Invalid username/and or password"
 				result.IsInvalid = true
+				writeToLog("Invalid login for: " + r.FormValue("login") + ", from: " + r.RemoteAddr)
 			}
 		}
 		err := mytemplate.ExecuteTemplate(w, "login.html", result)
@@ -114,9 +120,19 @@ func setup(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func setCookies(w http.ResponseWriter, r *http.Request) {
+func setLoginCookies(w http.ResponseWriter, r *http.Request) {
 
-	expiration := time.Now().Add(time.Hour * 24)
+	var expiration time.Time
+
+	if r.FormValue("keeplogin") == "1" {
+		println("I'm here")
+		expiration = time.Now().AddDate(0, 1, 0)
+		println(expiration.String())
+
+	} else {
+		expiration = time.Now().Add(time.Hour * 1)
+
+	}
 	sessionValue := GetMD5Hash(r.FormValue("login") + "9012")
 	cookie := http.Cookie{Name: "gocatsession", Value: sessionValue, Expires: expiration}
 
@@ -137,6 +153,7 @@ func checkLogin(username string, userpassword string) bool {
 }
 
 type ApplicationInfo struct {
+	Version     string
 	AppName     string
 	Dir         string
 	Message     string
@@ -159,6 +176,7 @@ type ApplicationInfo struct {
 func removeFile(dir string, w http.ResponseWriter, r *http.Request) {
 
 	if r.FormValue("confirmremove") != "" {
+		writeToLog("Removing file: " + r.FormValue("removefilename"))
 		err := os.Remove(dir + "/" + r.FormValue("removefilename"))
 		if err != nil {
 			fmt.Fprintf(w, "<p id=errormessage>%s</p>", err.Error())
@@ -171,6 +189,7 @@ func removeFile(dir string, w http.ResponseWriter, r *http.Request) {
 func saveFile(dir string, applicationInfo *ApplicationInfo, w http.ResponseWriter, r *http.Request) {
 
 	if r.FormValue("save") != "" {
+		writeToLog("Saving file: " + r.FormValue("editfile"))
 		err := WriteToFile(dir+"/"+r.FormValue("editfile"), r.FormValue("content"))
 		applicationInfo.Editing = false
 		if err != nil {
@@ -217,7 +236,7 @@ func app(w http.ResponseWriter, r *http.Request) {
 	dir := getAppDir() + appname
 	removeFile(dir, w, r)
 	files := listFiles(dir, w)
-
+	applicationInfo.Version = VERSION
 	applicationInfo.AppName = appname
 	applicationInfo.Dir = dir
 	applicationInfo.IsSubFolder = strings.Contains(appname, "/")
@@ -293,6 +312,8 @@ func logout(w http.ResponseWriter, r *http.Request) {
 	expiration := time.Now()
 	cookie := http.Cookie{Name: "gocatsession", Value: "-", Expires: expiration}
 	http.SetCookie(w, &cookie)
+	cookie2 := http.Cookie{Name: "login", Value: "-", Expires: expiration}
+	http.SetCookie(w, &cookie2)
 	http.Redirect(w, r, "/gocat/login", 307)
 
 }
