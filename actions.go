@@ -283,7 +283,6 @@ func download(w http.ResponseWriter, r *http.Request) {
 		w.Header().Add("Content-Type", "text/html;charset=UTF-8")
 		w.Header().Add("encoding", "UTF-8")
 
-		println(e.Error())
 		w.Write([]byte("Error: " + e.Error()))
 
 	} else {

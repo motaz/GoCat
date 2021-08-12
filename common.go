@@ -87,7 +87,7 @@ func listApplications(w http.ResponseWriter, r *http.Request) []AppInfo {
 				}
 
 				if hasJson {
-					println(fullfilename, " has JSON")
+
 					afile.Address = address + ":" + port
 					afile.IsRunning = isAppRunning(afile.Filename)
 					if afile.IsRunning {
@@ -164,7 +164,7 @@ func getPort(jsonfilename string) (success bool, port string) {
 
 	contents, err := ioutil.ReadFile(jsonfilename)
 	if err != nil {
-		println(err.Error())
+
 		return
 	} else {
 		var info DetailFile
@@ -213,11 +213,13 @@ func executeKill(appname string) (result string, errorMsg string) {
 
 func Shell(command string) (result string, errorMsg string) {
 
-	result, errorMsg = runShell(Start, "/bin/sh", command)
+	result, errorMsg = runShell(Start, "/bin/bash", command)
+
 	return
 }
 
 func runShell(runOrStart int, command string, arguments ...string) (result string, errorMsg string) {
+
 	var out bytes.Buffer
 	var err bytes.Buffer
 
