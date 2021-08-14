@@ -2,6 +2,7 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"crypto/md5"
 	"encoding/hex"
@@ -38,6 +39,22 @@ func getAppDir() string {
 	return dir
 }
 
+func init() {
+	writeToLog("Starting GoCat version : " + VERSION)
+	list, err := readRunningApps()
+	if err == nil {
+		for _, appName := range list {
+			if strings.Trim(appName, "") != "" {
+				if isAppRunning(appName) {
+					writeToLog(appName + " is already running")
+				} else {
+					runApp(appName)
+					writeToLog("Starting: " + appName)
+				}
+			}
+		}
+	}
+}
 func getConfigValue(valuename string, defaultvalue string) (value string) {
 
 	value = codeutils.GetConfigValue("gocat.ini", valuename)
@@ -68,6 +85,15 @@ func listApplications(w http.ResponseWriter, r *http.Request) []AppInfo {
 			address = address[:strings.LastIndex(address, ":")]
 		}
 
+		file, fileerror := os.Create("running.txt")
+		var writer *bufio.Writer
+		if fileerror == nil {
+
+			defer file.Close()
+
+			writer = bufio.NewWriter(file)
+			defer writer.Flush()
+		}
 		var list []AppInfo
 		for _, f := range files {
 			if f.IsDir() {
@@ -92,6 +118,10 @@ func listApplications(w http.ResponseWriter, r *http.Request) []AppInfo {
 					afile.IsRunning = isAppRunning(afile.Filename)
 					if afile.IsRunning {
 						afile.Running = "Running"
+
+						if fileerror == nil {
+							writer.WriteString(afile.Filename + "\n")
+						}
 					} else {
 						afile.Running = "Stopped"
 					}
@@ -282,4 +312,15 @@ func stopIfRunning(filename string, toShelf bool) (isAlreadyRunning bool) {
 
 func writeToLog(event string) {
 	codeutils.WriteToLog(event, "gocat")
+}
+
+func readRunningApps() (list []string, err error) {
+
+	var content []byte
+	content, err = ioutil.ReadFile("running.txt")
+	if err == nil {
+
+		list = strings.Split(string(content), "\n")
+	}
+	return
 }
