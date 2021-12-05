@@ -73,7 +73,7 @@ editing <b>{{.EditFileName}}</b>
     {{end}}
     </td>
 		  <td>{{.FileTime}}</td>
-		  <td>{{.Size}}</td>
+		  <td align = right>{{.Size}}</td>
       <td>   
          <form method=POST action="/gocat/app?appname={{$name}}">
     <input type=hidden name=editfile value="{{.FileName}}" >

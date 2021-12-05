@@ -66,10 +66,11 @@
 		<h2>Shelf</h2>
 		<table>
 		{{range .ShelfApps}}
-		<tr><td>{{.}}<br/>
+		<tr><td>{{.FileName}}<br/>
 		    <td>
 			<form method=POST>
-			<input type=hidden name=appname value="{{.}}" />
+			<input type=hidden name=appname value="{{.FileName}}" />
+      <font color=navy>{{.FileTime}}</font> {{.FileSize}}
 			<input type=submit name=action value="replace" class="bluebutton" />
 			</form>
 			</td>

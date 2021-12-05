@@ -100,7 +100,6 @@ func listApplications(w http.ResponseWriter, r *http.Request) []AppInfo {
 				var afile AppInfo
 				afile.Filename = f.Name()
 				fullfilename := dir + afile.Filename + "/" + afile.Filename
-				//afile.FileTime = f.ModTime().String()
 				hasJson := false
 				fileInfo, err := os.Stat(fullfilename)
 				port := ""
@@ -138,16 +137,26 @@ func listApplications(w http.ResponseWriter, r *http.Request) []AppInfo {
 
 }
 
-func listShelfApplications(w http.ResponseWriter, r *http.Request) []string {
+type ShelfAppInfo struct {
+	FileName string
+	FileTime string
+	FileSize string
+}
+
+func listShelfApplications(w http.ResponseWriter, r *http.Request) []ShelfAppInfo {
 
 	dir := getAppDir() + "shelf.dir"
 	files, err := ioutil.ReadDir(dir)
-	var list []string
+	var list []ShelfAppInfo
 	if err == nil {
 
 		for _, f := range files {
 			if !f.IsDir() {
-				list = append(list, f.Name())
+				var shelfFile ShelfAppInfo
+				shelfFile.FileName = f.Name()
+				shelfFile.FileTime = f.ModTime().String()[:19]
+				shelfFile.FileSize = displaySize(f.Size())
+				list = append(list, shelfFile)
 			}
 
 		}
@@ -155,6 +164,19 @@ func listShelfApplications(w http.ResponseWriter, r *http.Request) []string {
 
 	return list
 
+}
+
+func displaySize(size int64) (sizeText string) {
+
+	if size < 1024 {
+		sizeText = fmt.Sprintf("%d B", size)
+	} else if size < 1024*1024 {
+		sizeText = fmt.Sprintf("%0.1f K", float64(size)/1000)
+	} else {
+		sizeText = fmt.Sprintf("%0.1f M", (float32(size)/1000)/1000)
+
+	}
+	return
 }
 
 func listFiles(dir string, w http.ResponseWriter) []FileInfo {
@@ -168,13 +190,8 @@ func listFiles(dir string, w http.ResponseWriter) []FileInfo {
 		afile.FileName = f.Name()
 
 		afile.FileTime = f.ModTime().String()
-		if f.Size() < 1024 {
-			afile.Size = fmt.Sprintf("%d", f.Size())
-		} else if f.Size() < 1024*1024 {
-			afile.Size = fmt.Sprintf("%0.1f K", float64(f.Size())/1000)
-		} else {
-			afile.Size = fmt.Sprintf("%0.1f M", (float32(f.Size())/1000)/1000)
-
+		if !f.IsDir() {
+			afile.Size = displaySize(f.Size())
 		}
 
 		afile.IsDir = f.IsDir()

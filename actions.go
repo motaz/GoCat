@@ -21,7 +21,7 @@ type IndexTemplate struct {
 	Login       string
 	Linuxuser   string
 	Apps        []AppInfo
-	ShelfApps   []string
+	ShelfApps   []ShelfAppInfo
 }
 
 type DetailFile struct {
@@ -67,7 +67,7 @@ func login(w http.ResponseWriter, r *http.Request) {
 
 	user := getConfigValue("user", "")
 	if user == "" {
-		http.Redirect(w, r, "/gocat/setup", 307)
+		http.Redirect(w, r, "/gocat/setup", http.StatusTemporaryRedirect)
 
 	} else {
 		w.Header().Add("X-Frame-Options", "SAMEORIGIN")
@@ -130,7 +130,7 @@ func setLoginCookies(w http.ResponseWriter, r *http.Request) {
 		println(expiration.String())
 
 	} else {
-		expiration = time.Now().Add(time.Hour * 1)
+		expiration = time.Now().Add(time.Hour * 8)
 
 	}
 	sessionValue := GetMD5Hash(r.FormValue("login") + "9012")

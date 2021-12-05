@@ -173,7 +173,6 @@ func copyAndPutFile(fullfilename string, indexTemplate *IndexTemplate,
 			ex := filepath.Ext(fullfilename)
 
 			if ex == ".gz" || ex == ".zip" {
-				println("Has ", ex)
 				var command string
 				if ex == ".gz" {
 					command = "gunzip"
