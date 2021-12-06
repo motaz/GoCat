@@ -93,11 +93,15 @@ func stopApp(r *http.Request, indexTemplate *IndexTemplate) {
 }
 
 func isActionHappening(actionType StartStopType, appname string) bool {
+
 	if actionType == START {
-		return isAppRunning(appname)
+		isrunning, _ := isAppRunning(appname)
+		return isrunning
 	} else {
-		return !isAppRunning(appname) // == isClosed
+		isrunning, _ := isAppRunning(appname) // == isClosed
+		return !isrunning
 	}
+
 }
 
 func startAndstopApp(actionType StartStopType, r *http.Request, indexTemplate *IndexTemplate) {
@@ -117,12 +121,18 @@ func startAndstopApp(actionType StartStopType, r *http.Request, indexTemplate *I
 	} else {
 		var out string
 		var err string
+		infoFilename := getAppDir() + r.FormValue("appname") + "/" + r.FormValue("appname") + ".json"
+		_, details := readAppConfig(infoFilename)
+
 		if actionType == START {
+			details.IsRunning = true
 			out, err = Shell(getAppDir() + r.FormValue("appname") + "/start.sh")
 		} else {
 			out, err = executeKill(r.FormValue("appname"))
-
+			details.IsRunning = false
 		}
+		setConfigFile(details, infoFilename)
+		println(infoFilename)
 
 		if err == "" {
 

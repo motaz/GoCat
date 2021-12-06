@@ -4,15 +4,19 @@ package main
 import (
 	"html/template"
 	"net/http"
+	"runtime"
 	"strings"
 )
 
-const VERSION = "1.0.15"
+const VERSION = "1.0.17"
 
 var mytemplate *template.Template
 
 func main() {
-
+	println("Go version: ", runtime.Version())
+	writeToLog("Starting GoCat version : " + VERSION)
+	initApplications()
+	go check()
 	mytemplate = template.Must(template.ParseGlob("templates/*.html"))
 
 	http.HandleFunc("/", redirectToIndex)

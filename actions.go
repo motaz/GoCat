@@ -25,7 +25,9 @@ type IndexTemplate struct {
 }
 
 type DetailFile struct {
-	Port string
+	AppName   string
+	IsRunning bool
+	Port      string
 }
 
 func checkSession(w http.ResponseWriter, r *http.Request) (bool, string) {
@@ -125,9 +127,7 @@ func setLoginCookies(w http.ResponseWriter, r *http.Request) {
 	var expiration time.Time
 
 	if r.FormValue("keeplogin") == "1" {
-		println("I'm here")
 		expiration = time.Now().AddDate(0, 1, 0)
-		println(expiration.String())
 
 	} else {
 		expiration = time.Now().Add(time.Hour * 8)
@@ -208,7 +208,7 @@ func editFile(dir string, applicationInfo *ApplicationInfo, w http.ResponseWrite
 		applicationInfo.EditFileName = r.FormValue("editfile")
 		content, err := ioutil.ReadFile(dir + "/" + applicationInfo.EditFileName)
 		if err != nil {
-			println(err.Error())
+			writeToLog("Error in editFile: " + err.Error())
 		}
 		applicationInfo.Content = string(content)
 

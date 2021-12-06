@@ -100,7 +100,7 @@ editing <b>{{.EditFileName}}</b>
 
 		<h3>Upload Folder</h3>
 		<form method=POST  enctype="multipart/form-data">
-		<input type=file name="file" webkitdirectory mozdirectory >
+		<input type=file name="file" webkitdirectory mozdirectory multiple >
 		<input type=hidden name=dir value="{{.Dir}}" />
 		<input type=hidden name=appname value="{{.AppName}}" />
 	

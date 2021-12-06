@@ -23,11 +23,14 @@ func uploadfiles(w http.ResponseWriter, r *http.Request) []UploadedFileInfo {
 	var result []UploadedFileInfo
 
 	dir := r.FormValue("dir")
+
 	r.ParseMultipartForm(32 << 20)
 	files := r.MultipartForm.File["file"]
 	for _, onefile := range files {
 		file, _ := onefile.Open()
+
 		filename := onefile.Filename
+
 		afilename := dir + "/" + filename
 		if strings.Contains(afilename, "/") {
 			folder := afilename[0:strings.LastIndex(afilename, "/")]
@@ -95,34 +98,38 @@ func upload(w http.ResponseWriter, r *http.Request, indexTemplate *IndexTemplate
 		}
 		afilename := adir + handler.Filename
 		writeToLog("Uploading application: " + afilename)
-		{
-			// App Info
-			infoFilename := adir + aname + ".json"
-			port := r.FormValue("port")
-			if port == "" {
-				_, port = getPort(infoFilename)
-			}
 
-			// Configuration
+		// App Info
+		infoFilename := adir + aname + ".json"
+		port := r.FormValue("port")
+		if port == "" {
+			_, config := readAppConfig(infoFilename)
+			port = config.Port
+		}
+
+		// Configuration
+		if !toShelf {
+			var details DetailFile
+			details.Port = port
+			details.AppName = aname
+			err = writeConfigFile(details, infoFilename, *indexTemplate)
+
+		}
+
+		if err == nil {
 			if !toShelf {
-				err = writeConfigFile(port, infoFilename, *indexTemplate)
 
+				err = writeStartScript(adir, aname)
 			}
 
-			if err == nil {
-				if !toShelf {
+			copyAndPutFile(afilename, indexTemplate, file, handler.Filename,
+				toShelf)
 
-					err = writeStartScript(adir, aname)
-				}
+		}
 
-				copyAndPutFile(afilename, indexTemplate, file, handler.Filename,
-					toShelf)
-
-			}
-
-			if !toShelf && isAlreadyRunning && !isAppRunning(aname) {
-				runApp(aname)
-			}
+		isRunning, _ := isAppRunning(aname)
+		if !toShelf && isAlreadyRunning && !isRunning {
+			runApp(aname)
 		}
 
 	}
@@ -138,12 +145,18 @@ func writeStartScript(dir string, filename string) error {
 	return err
 }
 
-func writeConfigFile(port string, infoFilename string, indexTemplate IndexTemplate) error {
+func setConfigFile(details DetailFile, infoFilename string) error {
 
-	details := DetailFile{port}
 	jsonData, err := json.Marshal(details)
 
 	err = writeToFile(infoFilename, string(jsonData))
+
+	return err
+}
+
+func writeConfigFile(details DetailFile, infoFilename string, indexTemplate IndexTemplate) (err error) {
+
+	err = setConfigFile(details, infoFilename)
 	if err != nil {
 		indexTemplate.Message = "Error: " + err.Error()
 		indexTemplate.Class = "errormessage"

@@ -39,13 +39,13 @@ func getAppDir() string {
 	return dir
 }
 
-func init() {
-	writeToLog("Starting GoCat version : " + VERSION)
+func initApplications() {
 	list, err := readRunningApps()
 	if err == nil {
 		for _, appName := range list {
 			if strings.Trim(appName, "") != "" {
-				if isAppRunning(appName) {
+				isRunning, _ := isAppRunning(appName)
+				if isRunning {
 					writeToLog(appName + " is already running")
 				} else {
 					runApp(appName)
@@ -55,6 +55,7 @@ func init() {
 		}
 	}
 }
+
 func getConfigValue(valuename string, defaultvalue string) (value string) {
 
 	value = codeutils.GetConfigValue("gocat.ini", valuename)
@@ -65,12 +66,37 @@ func getConfigValue(valuename string, defaultvalue string) (value string) {
 }
 
 type AppInfo struct {
-	Filename  string
-	Port      string
-	Running   string
-	Address   string
-	FileTime  string
-	IsRunning bool
+	Filename     string
+	Port         string
+	Running      string
+	Address      string
+	FileTime     string
+	IsRunning    bool
+	RunningSince string
+	SinceColor   string
+}
+
+func getAppList() (apps []DetailFile) {
+
+	dir := getAppDir()
+	files, err := ioutil.ReadDir(dir)
+	apps = make([]DetailFile, 0)
+	if err == nil {
+		for _, f := range files {
+			if f.IsDir() {
+				fullfilename := dir + f.Name() + "/" + f.Name()
+				if err == nil {
+
+					hasJson, info := readAppConfig(fullfilename + ".json")
+					info.AppName = f.Name()
+					if hasJson {
+						apps = append(apps, info)
+					}
+				}
+			}
+		}
+	}
+	return
 }
 
 func listApplications(w http.ResponseWriter, r *http.Request) []AppInfo {
@@ -107,14 +133,20 @@ func listApplications(w http.ResponseWriter, r *http.Request) []AppInfo {
 
 					afile.FileTime = fileInfo.ModTime().String()
 					afile.FileTime = afile.FileTime[:19]
-					hasJson, port = getPort(fullfilename + ".json")
-					afile.Port = port
+					var info DetailFile
+					hasJson, info = readAppConfig(fullfilename + ".json")
+					afile.Port = info.Port
 				}
 
 				if hasJson {
 
 					afile.Address = address + ":" + port
-					afile.IsRunning = isAppRunning(afile.Filename)
+					afile.IsRunning, afile.RunningSince = isAppRunning(afile.Filename)
+					if strings.Contains(afile.RunningSince, ":") {
+						afile.SinceColor = "blue"
+					} else {
+						afile.SinceColor = "black"
+					}
 					if afile.IsRunning {
 						afile.Running = "Running"
 
@@ -205,7 +237,7 @@ func listFiles(dir string, w http.ResponseWriter) []FileInfo {
 	return list
 }
 
-func getPort(jsonfilename string) (success bool, port string) {
+func readAppConfig(jsonfilename string) (success bool, info DetailFile) {
 
 	success = false
 
@@ -214,19 +246,17 @@ func getPort(jsonfilename string) (success bool, port string) {
 
 		return
 	} else {
-		var info DetailFile
 		err := json.Unmarshal(contents, &info)
 		if err != nil {
 			println("Error in getPort: ", err.Error())
 		}
-		port = info.Port
 		success = true
 		return
 	}
 
 }
 
-func isAppRunning(appname string) bool {
+func isAppRunning(appname string) (isRunning bool, since string) {
 
 	var out bytes.Buffer
 
@@ -234,17 +264,29 @@ func isAppRunning(appname string) bool {
 	cmd.Stdout = &out
 	cmd.Run()
 
-	exist := false
+	isRunning = false
 
 	lines := strings.Split(out.String(), "\n")
 	for i := 0; i < len(lines); i++ {
 		if (strings.Contains(lines[i], appname)) && (!strings.Contains(lines[i], "grep")) &&
 			(!strings.Contains(lines[i], "check")) {
-			exist = true
+			since = lines[i]
+			for j := 0; j < 4; j++ {
+				if strings.Contains(since, " ") {
+
+					since = strings.Trim(since[strings.Index(since, " "):], " ")
+				}
+
+			}
+			if strings.Contains(since, " ") {
+				since = since[:strings.Index(since, " ")]
+			}
+
+			isRunning = true
 		}
 	}
 
-	return exist
+	return
 }
 
 const (
@@ -319,7 +361,7 @@ func runApp(appname string) {
 
 func stopIfRunning(filename string, toShelf bool) (isAlreadyRunning bool) {
 
-	isAlreadyRunning = isAppRunning(filename)
+	isAlreadyRunning, _ = isAppRunning(filename)
 	if !toShelf && isAlreadyRunning {
 		executeKill(filename)
 		time.Sleep(time.Second * 4)
@@ -328,6 +370,7 @@ func stopIfRunning(filename string, toShelf bool) (isAlreadyRunning bool) {
 }
 
 func writeToLog(event string) {
+
 	codeutils.WriteToLog(event, "gocat")
 }
 
@@ -340,4 +383,28 @@ func readRunningApps() (list []string, err error) {
 		list = strings.Split(string(content), "\n")
 	}
 	return
+}
+
+func checkClosedApps() {
+
+	list := getAppList()
+	for _, item := range list {
+		if item.IsRunning {
+
+			isRunning, _ := isAppRunning(item.AppName)
+			if !isRunning {
+				runApp(item.AppName)
+				println("Found ", item.AppName)
+				writeToLog("Starting after close/crash: " + item.AppName)
+			}
+
+		}
+	}
+}
+
+func check() {
+	for {
+		time.Sleep(time.Minute * 2)
+		checkClosedApps()
+	}
 }
