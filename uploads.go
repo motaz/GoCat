@@ -79,6 +79,7 @@ func upload(w http.ResponseWriter, r *http.Request, indexTemplate *IndexTemplate
 
 	} else {
 		aname := handler.Filename
+		writeToLog(aname)
 		ex := filepath.Ext(aname)
 		if ex == ".gz" || ex == ".zip" {
 			aname = aname[:strings.Index(aname, ex)]
@@ -188,7 +189,7 @@ func copyAndPutFile(fullfilename string, indexTemplate *IndexTemplate,
 			if ex == ".gz" || ex == ".zip" {
 				var command string
 				if ex == ".gz" {
-					command = "gunzip"
+					command = "gunzip -f "
 				} else if ex == ".zip" {
 					command = "unzip -o -d " + filepath.Dir(fullfilename)
 				}

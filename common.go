@@ -370,7 +370,6 @@ func stopIfRunning(filename string, toShelf bool) (isAlreadyRunning bool) {
 }
 
 func writeToLog(event string) {
-
 	codeutils.WriteToLog(event, "gocat")
 }
 
