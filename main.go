@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-const VERSION = "1.0.18"
+const VERSION = "1.0.20"
 
 var mytemplate *template.Template
 

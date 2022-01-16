@@ -128,7 +128,7 @@ func listApplications(w http.ResponseWriter, r *http.Request) []AppInfo {
 				fullfilename := dir + afile.Filename + "/" + afile.Filename
 				hasJson := false
 				fileInfo, err := os.Stat(fullfilename)
-				port := ""
+				//port := ""
 				if err == nil {
 
 					afile.FileTime = fileInfo.ModTime().String()
@@ -140,7 +140,7 @@ func listApplications(w http.ResponseWriter, r *http.Request) []AppInfo {
 
 				if hasJson {
 
-					afile.Address = address + ":" + port
+					afile.Address = address + ":" + afile.Port
 					afile.IsRunning, afile.RunningSince = isAppRunning(afile.Filename)
 					if strings.Contains(afile.RunningSince, ":") {
 						afile.SinceColor = "blue"
