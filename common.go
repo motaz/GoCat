@@ -80,6 +80,7 @@ func getAppList() (apps []DetailFile) {
 
 	dir := getAppDir()
 	files, err := ioutil.ReadDir(dir)
+
 	apps = make([]DetailFile, 0)
 	if err == nil {
 		for _, f := range files {
@@ -242,6 +243,7 @@ func readAppConfig(jsonfilename string) (success bool, info DetailFile) {
 	success = false
 
 	contents, err := ioutil.ReadFile(jsonfilename)
+
 	if err != nil {
 
 		return
@@ -302,7 +304,7 @@ func executeKill(appname string) (result string, errorMsg string) {
 
 func Shell(command string) (result string, errorMsg string) {
 
-	result, errorMsg = runShell(Start, "/bin/bash", command)
+	result, errorMsg = runShell(Start, "/bin/sh", command)
 
 	return
 }
@@ -342,21 +344,27 @@ func GetMD5Hash(text string) string {
 }
 
 func copyFile(sourcename string, targetname string) error {
+
 	source, err := os.Open(sourcename)
+
 	if err == nil {
+		defer source.Close()
+
 		os.Remove(targetname)
 		target, err := os.OpenFile(targetname, os.O_WRONLY|os.O_CREATE, 0766)
 		if err == nil {
+			defer target.Close()
 			_, err = io.Copy(target, source)
 		}
-		target.Close()
+
 	}
 	return err
 }
 
 func runApp(appname string) {
+
 	filename := getAppDir() + appname + "/start.sh"
-	Shell(filename) //; write result to log
+	Shell(filename)
 }
 
 func stopIfRunning(filename string, toShelf bool) (isAlreadyRunning bool) {
@@ -393,7 +401,6 @@ func checkClosedApps() {
 			isRunning, _ := isAppRunning(item.AppName)
 			if !isRunning {
 				runApp(item.AppName)
-				println("Found ", item.AppName)
 				writeToLog("Starting after close/crash: " + item.AppName)
 			}
 

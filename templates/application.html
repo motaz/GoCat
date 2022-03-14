@@ -29,23 +29,34 @@
 
 <a href="javascript:history.back()">..Back</a>
 
+{{if .NewFile}}
+  <br/>
+  <form method=post action="/gocat/app?appname={{.AppName}}">
+     <b>New filename </b><input type=text name=newfilename autofocus > <br/>
+     <textarea name=content rows=15 cols=60>{{.Content}}</textarea>
+     <br/>
+   <input type=submit name=savenewfile value='Save' class="bluebutton" />
+   <input type=submit name=cancel value='Cancel' class=button />
+
+  </form>
+{{end}}
+
 {{if .Editing}}
-<br/>
-editing <b>{{.EditFileName}}</b>
-<form method=post action="/gocat/app?appname={{.AppName}}">
-    <input type=hidden name=editfile value="{{.EditFileName}}" >
+  <br/>
+  Editing <b>{{.EditFileName}}</b>
+  <form method=post action="/gocat/app?appname={{.AppName}}">
+     <input type=hidden name=editfile value="{{.EditFileName}}" > 
+     <textarea name=content rows=15 cols=60>{{.Content}}</textarea>
+     <br/>
+   <input type=submit name=save value='Save' class="bluebutton" />
+   <input type=submit name=cancel value='Cancel' class=button />
 
-<textarea name=content rows=15 cols=60>{{.Content}}</textarea>
-<br/>
-<input type=submit name=save value='Save' class="bluebutton" />
-<input type=submit name=cancel value='Cancel' class=button />
-
-</form>
+  </form>
 {{end}}
 
 {{if .RemoveFile}}
 		<form method=post action='/gocat/app?appname={{.AppName}}'>"
-		Remove <b>{{.RemoveFileName}}</b>
+		    Remove <b>{{.RemoveFileName}}</b>
         <input type=hidden name=removefilename value="{{.RemoveFileName}}" >
 
 		<input type=submit name=confirmremove value='Yes' class=redbutton />
@@ -75,16 +86,20 @@ editing <b>{{.EditFileName}}</b>
 		  <td>{{.FileTime}}</td>
 		  <td align = right>{{.Size}}</td>
       <td>   
-         <form method=POST action="/gocat/app?appname={{$name}}">
-    <input type=hidden name=editfile value="{{.FileName}}" >
-    <input type=submit name=remove value=Remove class="redbutton" />
+    <form method=POST action="/gocat/app?appname={{$name}}">
+      <input type=hidden name=editfile value="{{.FileName}}" >
+      <input type=submit name=remove value=Remove class="redbutton" />
     </form>
     </td>
 		</tr>
 		{{end}}
 		</table>
-        <p>
+    <p>
 		<hr>
+    <form method=POST action="/gocat/app?appname={{$name}}">
+        <input type=submit name=newfile value='New File' class='button' />
+    </form>
+    <hr>
 		<form method=POST  enctype="multipart/form-data">
 		<h3>Upload file(s)</h3>
 		<input type=file name="file" multiple >

@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-const VERSION = "1.0.20"
+const VERSION = "1.0.22"
 
 var mytemplate *template.Template
 
@@ -33,6 +33,7 @@ func main() {
 	port := getConfigValue("port", ":2009")
 	println("GoCat version: ", VERSION)
 	println("Listening on port: ", port)
+	println("http://localhost:2009")
 	if !strings.Contains(port, ":") {
 		port = ":" + port
 	}

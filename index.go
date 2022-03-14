@@ -127,6 +127,7 @@ func startAndstopApp(actionType StartStopType, r *http.Request, indexTemplate *I
 		if actionType == START {
 			details.IsRunning = true
 			out, err = Shell(getAppDir() + r.FormValue("appname") + "/start.sh")
+			println("output:", out, err)
 		} else {
 			out, err = executeKill(r.FormValue("appname"))
 			details.IsRunning = false

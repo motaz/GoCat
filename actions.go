@@ -169,6 +169,8 @@ type ApplicationInfo struct {
 	EditFileName string
 	Content      string
 
+	NewFile bool
+
 	RemoveFile     bool
 	RemoveFileName string
 }
@@ -186,19 +188,33 @@ func removeFile(dir string, w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func saveNewFile(dir string, applicationInfo *ApplicationInfo, w http.ResponseWriter, r *http.Request) {
+
+	if r.FormValue("savenewfile") != "" {
+		actualSaveFile(r.FormValue("newfilename"), dir, r.FormValue("content"), w)
+	}
+}
+
 func saveFile(dir string, applicationInfo *ApplicationInfo, w http.ResponseWriter, r *http.Request) {
 
 	if r.FormValue("save") != "" {
-		writeToLog("Saving file: " + r.FormValue("editfile"))
-		err := WriteToFile(dir+"/"+r.FormValue("editfile"), r.FormValue("content"))
+		actualSaveFile(r.FormValue("editfile"), dir, r.FormValue("content"), w)
 		applicationInfo.Editing = false
-		if err != nil {
-			fmt.Fprintf(w, "<p id=errormessage>%s</p>", err.Error())
-		} else {
-			fmt.Fprintf(w, "<p id=infomessage>File saved: %s</p>", r.FormValue("editfile"))
-		}
 
 	}
+}
+
+func actualSaveFile(filename, dir, contents string, w http.ResponseWriter) (err error) {
+
+	writeToLog("Saving file: " + filename)
+	err = WriteToFile(dir+"/"+filename, contents)
+	if err != nil {
+		fmt.Fprintf(w, "<p id=errormessage>%s</p>", err.Error())
+	} else {
+		fmt.Fprintf(w, "<p id=infomessage>File saved: %s</p>", filename)
+	}
+	return
+
 }
 
 func editFile(dir string, applicationInfo *ApplicationInfo, w http.ResponseWriter, r *http.Request) {
@@ -212,6 +228,14 @@ func editFile(dir string, applicationInfo *ApplicationInfo, w http.ResponseWrite
 		}
 		applicationInfo.Content = string(content)
 
+	}
+
+}
+
+func showNewFile(dir string, applicationInfo *ApplicationInfo, w http.ResponseWriter, r *http.Request) {
+
+	if r.FormValue("newfile") != "" {
+		applicationInfo.NewFile = true
 	}
 
 }
@@ -235,6 +259,8 @@ func app(w http.ResponseWriter, r *http.Request) {
 	appname := r.FormValue("appname")
 	dir := getAppDir() + appname
 	removeFile(dir, w, r)
+	saveNewFile(dir, &applicationInfo, w, r)
+
 	files := listFiles(dir, w)
 	applicationInfo.Version = VERSION
 	applicationInfo.AppName = appname
@@ -245,6 +271,7 @@ func app(w http.ResponseWriter, r *http.Request) {
 
 	editFile(dir, &applicationInfo, w, r)
 	saveFile(dir, &applicationInfo, w, r)
+	showNewFile(dir, &applicationInfo, w, r)
 	if r.FormValue("remove") != "" {
 		applicationInfo.RemoveFile = true
 		applicationInfo.RemoveFileName = r.FormValue("editfile")
