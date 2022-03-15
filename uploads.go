@@ -18,6 +18,12 @@ type UploadedFileInfo struct {
 	Success  bool
 }
 
+func getFileName(contentDisposition string) (filename string) {
+	filename = contentDisposition[strings.Index(contentDisposition, "filename=")+10:]
+	filename = strings.Trim(filename, "\"")
+	return
+}
+
 func uploadfiles(w http.ResponseWriter, r *http.Request) []UploadedFileInfo {
 
 	var result []UploadedFileInfo
@@ -29,7 +35,7 @@ func uploadfiles(w http.ResponseWriter, r *http.Request) []UploadedFileInfo {
 	for _, onefile := range files {
 		file, _ := onefile.Open()
 
-		filename := onefile.Filename
+		filename := getFileName(onefile.Header["Content-Disposition"][0])
 
 		afilename := dir + "/" + filename
 		if strings.Contains(afilename, "/") {
