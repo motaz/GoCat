@@ -4,17 +4,21 @@ package main
 import (
 	"html/template"
 	"net/http"
+
 	"runtime"
 	"strings"
 )
 
-const VERSION = "1.0.22"
+const VERSION = "1.0.24"
 
 var mytemplate *template.Template
 
 func main() {
 	println("Go version: ", runtime.Version())
 	writeToLog("Starting GoCat version : " + VERSION)
+	println("OS,Arch: ", runtime.GOOS, runtime.GOARCH)
+	println("No of CPUs: ", runtime.NumCPU())
+
 	initApplications()
 	go check()
 	mytemplate = template.Must(template.ParseGlob("templates/*.html"))
@@ -33,10 +37,11 @@ func main() {
 	port := getConfigValue("port", ":2009")
 	println("GoCat version: ", VERSION)
 	println("Listening on port: ", port)
-	println("http://localhost:2009")
 	if !strings.Contains(port, ":") {
 		port = ":" + port
 	}
+	println("http://localhost" + port)
+
 	err := http.ListenAndServe(port, nil)
 	if err != nil {
 		println("Error: " + err.Error())

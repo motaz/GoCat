@@ -173,6 +173,9 @@ type ApplicationInfo struct {
 
 	RemoveFile     bool
 	RemoveFileName string
+
+	RenameFile     bool
+	RenameFileName string
 }
 
 func removeFile(dir string, w http.ResponseWriter, r *http.Request) {
@@ -184,6 +187,19 @@ func removeFile(dir string, w http.ResponseWriter, r *http.Request) {
 			fmt.Fprintf(w, "<p id=errormessage>%s</p>", err.Error())
 		} else {
 			fmt.Fprintf(w, "<p id=infomessage>File removed: %s</p>", r.FormValue("removefilename"))
+		}
+	}
+}
+
+func renameFile(dir string, w http.ResponseWriter, r *http.Request) {
+
+	if r.FormValue("dorename") != "" {
+		writeToLog("Renaming file: " + r.FormValue("renamefilename"))
+		err := os.Rename(dir+"/"+r.FormValue("renamefilename"), dir+"/"+r.FormValue("newfilename"))
+		if err != nil {
+			fmt.Fprintf(w, "<p id=errormessage>%s</p>", err.Error())
+		} else {
+			fmt.Fprintf(w, "<p id=infomessage>File renamed: %s</p>", r.FormValue("newfilename"))
 		}
 	}
 }
@@ -259,6 +275,7 @@ func app(w http.ResponseWriter, r *http.Request) {
 	appname := r.FormValue("appname")
 	dir := getAppDir() + appname
 	removeFile(dir, w, r)
+	renameFile(dir, w, r)
 	saveNewFile(dir, &applicationInfo, w, r)
 
 	files := listFiles(dir, w)
@@ -275,9 +292,12 @@ func app(w http.ResponseWriter, r *http.Request) {
 	if r.FormValue("remove") != "" {
 		applicationInfo.RemoveFile = true
 		applicationInfo.RemoveFileName = r.FormValue("editfile")
-
 	}
 
+	if r.FormValue("rename") != "" {
+		applicationInfo.RenameFile = true
+		applicationInfo.RenameFileName = r.FormValue("renamefile")
+	}
 	err := mytemplate.ExecuteTemplate(w, "application.html", applicationInfo)
 	if err != nil {
 		w.Write([]byte("Error: " + err.Error()))

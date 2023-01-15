@@ -63,9 +63,20 @@
 		<input type=submit name=cancel value='Cancel' class=button />
 		</form>
 {{end}}
+
+{{if .RenameFile}}
+		<form method=post action='/gocat/app?appname={{.AppName}}'>
+		    Rename
+        <input type=hidden name=renamefilename value="{{.RenameFileName}}" >
+        <input type=text name=newfilename value="{{.RenameFileName}}" >
+
+		<input type=submit name=dorename value='Rename' class=redbutton />
+		<input type=submit name=cancel value='Cancel' class=button />
+		</form>
+{{end}}
 		<table>
 		<tr style='background:#aaaa88;'><th>File</th><th>Edit</th><th>File Time</th>
-		  <th>File Size</th><th>Delete</th></tr>
+		  <th>File Size</th><th>Delete</th><th>Rename</th></tr>
 {{$name := .AppName}}		
 		{{range .Files}}
 		<tr>
@@ -89,6 +100,12 @@
     <form method=POST action="/gocat/app?appname={{$name}}">
       <input type=hidden name=editfile value="{{.FileName}}" >
       <input type=submit name=remove value=Remove class="redbutton" />
+    </form>
+    </td>
+          <td>   
+    <form method=POST action="/gocat/app?appname={{$name}}">
+      <input type=hidden name=renamefile value="{{.FileName}}" >
+      <input type=submit name=rename value=Rename class="bluebutton" />
     </form>
     </td>
 		</tr>
