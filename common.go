@@ -129,7 +129,6 @@ func listApplications(w http.ResponseWriter, r *http.Request) []AppInfo {
 				fullfilename := dir + afile.Filename + "/" + afile.Filename
 				hasJson := false
 				fileInfo, err := os.Stat(fullfilename)
-				//port := ""
 				if err == nil {
 
 					afile.FileTime = fileInfo.ModTime().String()

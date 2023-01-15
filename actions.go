@@ -155,6 +155,7 @@ func checkLogin(username string, userpassword string) bool {
 type ApplicationInfo struct {
 	Version     string
 	AppName     string
+	Port        string
 	Dir         string
 	Message     string
 	Login       string
@@ -256,6 +257,17 @@ func showNewFile(dir string, applicationInfo *ApplicationInfo, w http.ResponseWr
 
 }
 
+func changePort(configFileName string, r *http.Request) {
+
+	if r.FormValue("changeport") != "" {
+		_, detail := readAppConfig(configFileName)
+
+		detail.Port = r.FormValue("newport")
+		setConfigFile(detail, configFileName)
+
+	}
+}
+
 func app(w http.ResponseWriter, r *http.Request) {
 
 	_, login := checkSession(w, r)
@@ -278,6 +290,12 @@ func app(w http.ResponseWriter, r *http.Request) {
 	renameFile(dir, w, r)
 	saveNewFile(dir, &applicationInfo, w, r)
 
+	configFileName := dir + "/" + appname + ".json"
+	changePort(configFileName, r)
+	_, info := readAppConfig(configFileName)
+
+	applicationInfo.Port = info.Port
+
 	files := listFiles(dir, w)
 	applicationInfo.Version = VERSION
 	applicationInfo.AppName = appname
@@ -298,6 +316,8 @@ func app(w http.ResponseWriter, r *http.Request) {
 		applicationInfo.RenameFile = true
 		applicationInfo.RenameFileName = r.FormValue("renamefile")
 	}
+
+	changePort(configFileName, r)
 	err := mytemplate.ExecuteTemplate(w, "application.html", applicationInfo)
 	if err != nil {
 		w.Write([]byte("Error: " + err.Error()))

@@ -102,7 +102,7 @@
       <input type=submit name=remove value=Remove class="redbutton" />
     </form>
     </td>
-          <td>   
+    <td>   
     <form method=POST action="/gocat/app?appname={{$name}}">
       <input type=hidden name=renamefile value="{{.FileName}}" >
       <input type=submit name=rename value=Rename class="bluebutton" />
@@ -115,8 +115,14 @@
 		<hr>
     <form method=POST action="/gocat/app?appname={{$name}}">
         <input type=submit name=newfile value='New File' class='button' />
+        
+        <Br/>
+        Port <input type=text name=newport value="{{.Port}}" />
+        <input type=submit name=changeport value='Update' class='button' />
+        
     </form>
     <hr>
+
 		<form method=POST  enctype="multipart/form-data">
 		<h3>Upload file(s)</h3>
 		<input type=file name="file" multiple >
