@@ -317,7 +317,6 @@ func app(w http.ResponseWriter, r *http.Request) {
 		applicationInfo.RenameFileName = r.FormValue("renamefile")
 	}
 
-	changePort(configFileName, r)
 	err := mytemplate.ExecuteTemplate(w, "application.html", applicationInfo)
 	if err != nil {
 		w.Write([]byte("Error: " + err.Error()))
