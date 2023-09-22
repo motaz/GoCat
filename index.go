@@ -2,10 +2,49 @@
 package main
 
 import (
+	"fmt"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 )
+
+type OutGetterType string
+
+func ContainsAny(str string, substr string) bool {
+	return strings.Contains(strings.ToLower(str), strings.ToLower(substr))
+}
+
+func (o *OutGetterType) Write(p []byte) (n int, err error) {
+	go getVersion(p, *o)
+	return
+}
+
+func getVersion(p []byte, o OutGetterType) {
+	Outs := strings.Split(string(p), "\n")
+	var version string
+	for _, line := range Outs {
+		fmt.Println(line)
+		if ContainsAny(line, "version") && !(ContainsAny(line, "go ") || ContainsAny(line, "GoVersion")) {
+			var bef string
+			for i, char := range line {
+				letter := string(char)
+				after1 := line[i+1 : i+2]
+				bef += letter
+				if ContainsAny(bef, "version") {
+					if after1 != ":" {
+						version = line[i+2:]
+						break
+					}
+				}
+			}
+			break
+		}
+	}
+	AppVersions[string(o)] = version
+}
+
+var AppVersions = map[string]string{}
 
 func index(w http.ResponseWriter, r *http.Request) {
 
@@ -23,6 +62,7 @@ func index(w http.ResponseWriter, r *http.Request) {
 			upload(w, r, &indexTemplate)
 		}
 		if r.FormValue("start") == "Start" {
+			fmt.Fprint(w, "<html>")
 			startApp(r, &indexTemplate)
 			indexTemplate.NeedRefresh = false
 		}
@@ -34,9 +74,28 @@ func index(w http.ResponseWriter, r *http.Request) {
 		if r.FormValue("action") == "replace" {
 			replaceApp(r, &indexTemplate)
 		}
+		if r.FormValue("remove") == "true" {
+			appname := r.FormValue("appname")
+			err := os.Remove(getAppDir() + "shelf.dir/" + appname)
+			if err != nil {
+				writeToLog("Error in remove: " + err.Error())
+				indexTemplate.Message = "Error :" + err.Error()
+				indexTemplate.Class = "errormessage"
+			} else {
+				indexTemplate.Message = "file removed: " + appname
+				indexTemplate.Class = "infomessage"
+			}
+		}
 
 		list = listApplications(w, r)
 		shelfList := listShelfApplications(w, r)
+		for i, item := range list {
+			for _, shelfItem := range shelfList {
+				if item.Filename == shelfItem.FileName {
+					list[i].Class = "inShelf"
+				}
+			}
+		}
 		indexTemplate.Apps = list
 		indexTemplate.ShelfApps = shelfList
 
@@ -60,7 +119,10 @@ func replaceApp(r *http.Request, indexTemplate *IndexTemplate) {
 		indexTemplate.Message = "Application replaced: " + appname
 
 		indexTemplate.Class = "bluemessage"
-		os.Remove(sourceFile)
+		err = os.Remove(sourceFile)
+		if err != nil {
+			writeToLog("Error replaceApp remove source: " + err.Error())
+		}
 	} else {
 
 		indexTemplate.Message = "Error replacing file: " + appname + ": " + err.Error()
@@ -121,15 +183,19 @@ func startAndstopApp(actionType StartStopType, r *http.Request, indexTemplate *I
 	} else {
 		var out string
 		var err string
-		infoFilename := getAppDir() + r.FormValue("appname") + "/" + r.FormValue("appname") + ".json"
+		infoFilename := getAppDir() + appname + "/" + appname + ".json"
 		_, details := readAppConfig(infoFilename)
 
 		if actionType == START {
 			details.IsRunning = true
-			out, err = Shell(getAppDir() + r.FormValue("appname") + "/start.sh")
-			println("output:", out, err)
+			errorMsg := runApp(appname)
+			if errorMsg != "" {
+				indexTemplate.Message = "Error: " + errorMsg
+				indexTemplate.Class = "errormessage"
+				details.IsRunning = false
+			}
 		} else {
-			out, err = executeKill(r.FormValue("appname"))
+			out, err = executeKill(appname)
 			details.IsRunning = false
 		}
 		setConfigFile(details, infoFilename)
@@ -138,6 +204,11 @@ func startAndstopApp(actionType StartStopType, r *http.Request, indexTemplate *I
 		if err == "" {
 
 			indexTemplate.Message = appname + " has " + label + "\n" + out
+			isrunning, _ := isAppRunning(appname)
+			if label == "started" && !isrunning {
+				indexTemplate.Message = "error while running " + appname + "\n" + out
+				indexTemplate.Class = "errormessage"
+			}
 			time.Sleep(time.Second * 2)
 
 		} else {

@@ -26,7 +26,7 @@
 		<tr style='background:#aaaa88;'><th>Application</th><th>Port</th>
 		<th>Update Time</th><th>Status</th><th>Running Since</th><th>Run</th><th>Stop</th></tr>
 		{{range .Apps}}
-		  <tr>
+		  <tr id={{.Class}}>
 		  <form method=POST>
 		  <input type=hidden name=appname value={{.Filename}} />
 		  <td><a href="/gocat/app?appname={{.Filename}}"> {{.Filename}}</a></td> 
@@ -68,12 +68,26 @@
 		<table>
 		{{range .ShelfApps}}
 		<tr><td>{{.FileName}}<br/>
-		    <td>
-			<form method=POST>
+		    <td style="white-space: nobr;">
+			<form method=POST name=aform>
 			<input type=hidden name=appname value="{{.FileName}}" />
       <font color=navy>{{.FileTime}}</font> {{.FileSize}}
 			<input type=submit name=action value="replace" class="bluebutton" />
+      <input type="button" class="redbutton" value="remove" onclick="remove()">
 			</form>
+      <form name=delform>
+			<input type=hidden name=appname value="{{.FileName}}" />
+			<input type=hidden name=remove value="true" />
+      </form>
+      <script>
+      function remove() {
+        conf = confirm("do you want to remove {{.FileName}}")
+        if (conf) {
+          delform.submit()
+        }
+      }
+      </script>
+      
 			</td>
 		</tr>
 		{{end}}

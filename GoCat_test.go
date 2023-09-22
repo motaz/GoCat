@@ -5,6 +5,5 @@ import (
 )
 
 func Test(t *testing.T) {
-
 	checkClosedApps()
 }

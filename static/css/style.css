@@ -246,6 +246,13 @@ h6 {
 
 
 /*----start page content----*/
+
+
+#inShelf{
+	background-color: #aaa;
+}
+
+
 #page_content{
 	background:#FFFFFF;
 	padding:10px;
@@ -270,6 +277,7 @@ h6 {
 	margin-bottom:10px;
 	margin-left:10px;
 }
+
 
 #page_content .right_section .top_content .column_two{
 	width:100%;
@@ -350,6 +358,10 @@ a.btn:hover{
 .left_side_bar .col_1 .box ul li a:hover{
 	color:#364b38;
 	text-decoration:none;
+}
+
+.nobr {
+	white-space: nowrap;
 }
 /*----end page content----*/
 

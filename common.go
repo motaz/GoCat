@@ -48,8 +48,11 @@ func initApplications() {
 				if isRunning {
 					writeToLog(appName + " is already running")
 				} else {
-					runApp(appName)
+					errorMsg := runApp(appName)
 					writeToLog("Starting: " + appName)
+					if errorMsg != "" {
+						writeToLog("Error in runapp " + appName + ": " + errorMsg)
+					}
 				}
 			}
 		}
@@ -66,7 +69,9 @@ func getConfigValue(valuename string, defaultvalue string) (value string) {
 }
 
 type AppInfo struct {
+	Version      string
 	Filename     string
+	Class        string
 	Port         string
 	Running      string
 	Address      string
@@ -104,7 +109,6 @@ func listApplications(w http.ResponseWriter, r *http.Request) []AppInfo {
 
 	dir := getAppDir()
 	files, err := ioutil.ReadDir(dir)
-
 	if err == nil {
 
 		address := "http://" + r.Host
@@ -126,6 +130,7 @@ func listApplications(w http.ResponseWriter, r *http.Request) []AppInfo {
 			if f.IsDir() {
 				var afile AppInfo
 				afile.Filename = f.Name()
+				afile.Version, _ = AppVersions[afile.Filename]
 				fullfilename := dir + afile.Filename + "/" + afile.Filename
 				hasJson := false
 				fileInfo, err := os.Stat(fullfilename)
@@ -349,21 +354,29 @@ func copyFile(sourcename string, targetname string) error {
 	if err == nil {
 		defer source.Close()
 
-		os.Remove(targetname)
-		target, err := os.OpenFile(targetname, os.O_WRONLY|os.O_CREATE, 0766)
+		err = os.Remove(targetname)
+		if err != nil {
+			if strings.Contains(err.Error(), "no such file or directory") {
+				err = nil
+			}
+		}
 		if err == nil {
-			defer target.Close()
-			_, err = io.Copy(target, source)
+			target, err := os.OpenFile(targetname, os.O_WRONLY|os.O_CREATE, 0766)
+			if err == nil {
+				defer target.Close()
+				_, err = io.Copy(target, source)
+			}
 		}
 
 	}
 	return err
 }
 
-func runApp(appname string) {
+func runApp(appname string) (errorMsg string) {
 
 	filename := getAppDir() + appname + "/start.sh"
-	Shell(filename)
+	_, errorMsg = Shell(filename)
+	return
 }
 
 func stopIfRunning(filename string, toShelf bool) (isAlreadyRunning bool) {
@@ -377,6 +390,7 @@ func stopIfRunning(filename string, toShelf bool) (isAlreadyRunning bool) {
 }
 
 func writeToLog(event string) {
+	fmt.Println(event)
 	codeutils.WriteToLog(event, "gocat")
 }
 

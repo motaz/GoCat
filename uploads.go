@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"mime/multipart"
 	"net/http"
@@ -176,6 +177,7 @@ func copyAndPutFile(fullfilename string, indexTemplate *IndexTemplate,
 	file multipart.File, onlyfilename string, toShelf bool) {
 
 	os.Remove(fullfilename + ".tmp")
+
 	tempFile, err := os.OpenFile(fullfilename+".tmp", os.O_WRONLY|os.O_CREATE, 777)
 	if err != nil {
 		indexTemplate.Message = err.Error()
@@ -185,42 +187,55 @@ func copyAndPutFile(fullfilename string, indexTemplate *IndexTemplate,
 		// Copy application file to temp file
 		_, err := io.Copy(tempFile, file)
 		tempFile.Close()
-
-		// Copy to origional file
-		err = copyFile(fullfilename+".tmp", fullfilename)
-
-		if err == nil {
-			ex := filepath.Ext(fullfilename)
-
-			if ex == ".gz" || ex == ".zip" {
-				var command string
-				if ex == ".gz" {
-					command = "gunzip -f "
-				} else if ex == ".zip" {
-					command = "unzip -o -d " + filepath.Dir(fullfilename)
-				}
-				_, err := runShell(Run, "/bin/sh", "-c", command+" "+fullfilename)
-				if ex == ".zip" {
-
-					os.Remove(fullfilename)
-				}
-
-				if err != "" {
-					writeToLog("Error while uncompress: " + err)
-				}
-			}
-			if toShelf {
-				indexTemplate.Message = "File uploaded to shelf: " + onlyfilename
-			} else {
-				indexTemplate.Message = "File uploaded: " + onlyfilename
-			}
-			indexTemplate.Class = "infomessage"
-			os.Remove(fullfilename + ".tmp")
-		} else {
-
-			indexTemplate.Message = "Error uploading file: " + onlyfilename + ": " + err.Error()
+		if err != nil {
+			indexTemplate.Message = "copy error: " + err.Error()
 			indexTemplate.Class = "errormessage"
-			writeToLog(indexTemplate.Message)
+		} else {
+			// Copy to origional file
+			err = copyFile(fullfilename+".tmp", fullfilename)
+
+			if err == nil {
+				ex := filepath.Ext(fullfilename)
+
+				if ex == ".gz" || ex == ".zip" {
+					var command string
+					if ex == ".gz" {
+						command = "gunzip -f "
+					} else if ex == ".zip" {
+						command = "unzip -o -d " + filepath.Dir(fullfilename)
+					}
+					err := os.Remove(fullfilename[:strings.Index(fullfilename, ex)])
+					if err != nil && !strings.Contains(err.Error(), "no such file or directory") {
+						writeToLog("Error remove old to uncompress: " + err.Error())
+					}
+					_, errstr := runShell(Run, "/bin/sh", "-c", command+" "+fullfilename)
+					fmt.Println("fullname", fullfilename)
+					if errstr == "" && ex == ".zip" {
+
+						os.Remove(fullfilename)
+					}
+
+					if errstr != "" {
+						indexTemplate.Message = "Error: " + errstr
+						indexTemplate.Class = "errormessage"
+						writeToLog("Error while uncompress: " + errstr)
+					}
+				}
+				if indexTemplate.Class != "errormessage" {
+					if toShelf {
+						indexTemplate.Message = "File uploaded to shelf: " + onlyfilename
+					} else {
+						indexTemplate.Message = "File uploaded: " + onlyfilename
+					}
+					indexTemplate.Class = "infomessage"
+				}
+				os.Remove(fullfilename + ".tmp")
+			} else {
+
+				indexTemplate.Message = "Error uploading file: " + onlyfilename + ": " + err.Error()
+				indexTemplate.Class = "errormessage"
+				writeToLog(indexTemplate.Message)
+			}
 		}
 	}
 }
