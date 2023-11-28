@@ -20,6 +20,7 @@ type IndexTemplate struct {
 	NeedRefresh bool
 	Login       string
 	Linuxuser   string
+	Remove      string
 	Apps        []AppInfo
 	ShelfApps   []ShelfAppInfo
 }
