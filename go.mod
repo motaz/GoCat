@@ -1,5 +1,5 @@
-module GoCat
+module gocat
 
-go 1.17
+go 1.21.0
 
-require github.com/motaz/codeutils v1.0.6
+require github.com/motaz/codeutils v1.0.22

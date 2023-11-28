@@ -85,6 +85,8 @@ func index(w http.ResponseWriter, r *http.Request) {
 				indexTemplate.Message = "file removed: " + appname
 				indexTemplate.Class = "infomessage"
 			}
+		} else if r.FormValue("remove") == "remove" {
+			indexTemplate.Remove = r.FormValue("appname")
 		}
 
 		list = listApplications(w, r)

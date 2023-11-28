@@ -69,31 +69,32 @@
 		{{range .ShelfApps}}
 		<tr><td>{{.FileName}}<br/>
 		    <td style="white-space: nobr;">
-			<form method=POST name=aform>
+			<form method=POST name=aform style="display: inline-block;">
 			<input type=hidden name=appname value="{{.FileName}}" />
       <font color=navy>{{.FileTime}}</font> {{.FileSize}}
 			<input type=submit name=action value="replace" class="bluebutton" />
-      <input type="button" class="redbutton" value="remove" onclick="remove()">
-			</form>
-      <form name=delform>
-			<input type=hidden name=appname value="{{.FileName}}" />
-			<input type=hidden name=remove value="true" />
       </form>
-      <script>
-      function remove() {
-        conf = confirm("do you want to remove {{.FileName}}")
-        if (conf) {
-          delform.submit()
-        }
-      }
-      </script>
-      
+      <form name=remove method=POST style="display: inline-block;">
+			<input type=hidden name=appname value="{{.FileName}}" />
+			<input type=hidden name=remove value="remove" />
+      <input type="submit" class="redbutton" value="remove">
+      </form>
 			</td>
 		</tr>
 		{{end}}
 		</table>
 		<hr/>
-        
+    
+    {{ if ne .Remove "" }}
+    <form name=remove method=POST>
+		<input type=hidden name=appname value="{{.Remove}}" />
+		<input type=hidden name=remove value="true" />
+    <h4>do you want to remove: {{.Remove}}
+    <input type="submit" class="redbutton" value="remove" onclick=>
+    </h4>
+    </form>
+    {{end}}
+    
 		<form method=POST enctype="multipart/form-data">
 		<h3>Upload Application</h3>
 		Port <input type=text name=port size=20 /><br/>
