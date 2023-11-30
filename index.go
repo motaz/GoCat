@@ -24,7 +24,6 @@ func getVersion(p []byte, o OutGetterType) {
 	Outs := strings.Split(string(p), "\n")
 	var version string
 	for _, line := range Outs {
-		fmt.Println(line)
 		if ContainsAny(line, "version") && !(ContainsAny(line, "go ") || ContainsAny(line, "GoVersion")) {
 			var bef string
 			for i, char := range line {
@@ -201,7 +200,6 @@ func startAndstopApp(actionType StartStopType, r *http.Request, indexTemplate *I
 			details.IsRunning = false
 		}
 		setConfigFile(details, infoFilename)
-		println(infoFilename)
 
 		if err == "" {
 

@@ -375,7 +375,7 @@ func copyFile(sourcename string, targetname string) error {
 func runApp(appname string) (errorMsg string) {
 
 	filename := getAppDir() + appname + "/start.sh"
-	reWriteFile(filename)
+	reWriteFile(filename, appname)
 	var result string
 	result, errorMsg = Shell(filename)
 	writeToLog("Running " + appname + ": " + result + ": " + errorMsg)
@@ -431,7 +431,7 @@ func check() {
 	}
 }
 
-func reWriteFile(filename string) {
+func reWriteFile(filename, appname string) {
 
 	file, err := os.OpenFile(filename, os.O_RDONLY, 0644)
 	if err == nil {
@@ -443,6 +443,10 @@ func reWriteFile(filename string) {
 			scanner := bufio.NewScanner(file)
 			for scanner.Scan() {
 				line := scanner.Text()
+				if strings.Contains(line, "&") && strings.Contains(line, appname) &&
+					!strings.Contains(line, "nohup") {
+					line = "nohup " + line
+				}
 				outfile.WriteString(line + "\n")
 			}
 			os.Remove(filename)

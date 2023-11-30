@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"mime/multipart"
 	"net/http"
@@ -148,7 +147,7 @@ func writeStartScript(dir string, filename string) error {
 	scriptFileName := dir + "start.sh"
 	script := "#!/bin/bash\n" +
 		"cd " + dir + "\n" +
-		"./" + filename + "&\n"
+		"nohup ./" + filename + "&\n"
 	err := writeToFile(scriptFileName, script)
 	return err
 }
@@ -209,7 +208,6 @@ func copyAndPutFile(fullfilename string, indexTemplate *IndexTemplate,
 						writeToLog("Error remove old to uncompress: " + err.Error())
 					}
 					_, errstr := runShell(Run, "/bin/sh", "-c", command+" "+fullfilename)
-					fmt.Println("fullname", fullfilename)
 					if errstr == "" && ex == ".zip" {
 
 						os.Remove(fullfilename)

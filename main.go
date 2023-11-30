@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-const VERSION = "1.0.38 r30-Nov"
+const VERSION = "1.0.39 r30-Nov"
 
 var mytemplate *template.Template
 
@@ -44,7 +44,7 @@ func main() {
 
 	err := http.ListenAndServe(port, nil)
 	if err != nil {
-		println("Error: " + err.Error())
+		writeToLog("Error: " + err.Error())
 	}
 
 }
