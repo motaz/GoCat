@@ -249,7 +249,6 @@ func readAppConfig(jsonfilename string) (success bool, info DetailFile) {
 	contents, err := ioutil.ReadFile(jsonfilename)
 
 	if err != nil {
-		writeToLog("Error in readAppConfig: " + err.Error())
 
 		return
 	} else {
@@ -426,7 +425,7 @@ func checkClosedApps() {
 
 func check() {
 	for {
-		time.Sleep(time.Minute * 2)
+		time.Sleep(time.Second * 10)
 		checkClosedApps()
 	}
 }
