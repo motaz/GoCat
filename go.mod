@@ -1,4 +1,4 @@
-module gocat
+module GoCat
 
 go 1.21.0
 

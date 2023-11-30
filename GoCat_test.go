@@ -1,9 +1,11 @@
 package main
 
 import (
+	"fmt"
 	"testing"
 )
 
 func Test(t *testing.T) {
-	checkClosedApps()
+	result := runApp("SMSRestGo")
+	fmt.Println("Result: " + result)
 }

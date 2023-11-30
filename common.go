@@ -249,12 +249,13 @@ func readAppConfig(jsonfilename string) (success bool, info DetailFile) {
 	contents, err := ioutil.ReadFile(jsonfilename)
 
 	if err != nil {
+		writeToLog("Error in readAppConfig: " + err.Error())
 
 		return
 	} else {
 		err := json.Unmarshal(contents, &info)
 		if err != nil {
-			println("Error in getPort: ", err.Error())
+			writeToLog("Error in getPort: " + err.Error())
 		}
 		success = true
 		return
@@ -271,11 +272,10 @@ func isAppRunning(appname string) (isRunning bool, since string) {
 	cmd.Run()
 
 	isRunning = false
-
 	lines := strings.Split(out.String(), "\n")
+
 	for i := 0; i < len(lines); i++ {
-		if (strings.Contains(lines[i], appname)) && (!strings.Contains(lines[i], "grep")) &&
-			(!strings.Contains(lines[i], "check")) {
+		if (strings.Contains(lines[i], appname)) && (!strings.Contains(lines[i], "grep")) {
 			since = lines[i]
 			for j := 0; j < 4; j++ {
 				if strings.Contains(since, " ") {
@@ -335,7 +335,7 @@ func getLinuxUser() string {
 	result, err := runShell(Run, "/bin/sh", "-c", "whoami")
 
 	if err != "" {
-		println("Error: " + err)
+		writeToLog("Error: " + err)
 	}
 	return result
 }
@@ -375,7 +375,10 @@ func copyFile(sourcename string, targetname string) error {
 func runApp(appname string) (errorMsg string) {
 
 	filename := getAppDir() + appname + "/start.sh"
-	_, errorMsg = Shell(filename)
+	reWriteFile(filename)
+	var result string
+	result, errorMsg = Shell(filename)
+	writeToLog("Running " + appname + ": " + result + ": " + errorMsg)
 	return
 }
 
@@ -390,7 +393,7 @@ func stopIfRunning(filename string, toShelf bool) (isAlreadyRunning bool) {
 }
 
 func writeToLog(event string) {
-	fmt.Println(event)
+
 	codeutils.WriteToLog(event, "gocat")
 }
 
@@ -426,4 +429,25 @@ func check() {
 		time.Sleep(time.Minute * 2)
 		checkClosedApps()
 	}
+}
+
+func reWriteFile(filename string) {
+
+	file, err := os.OpenFile(filename, os.O_RDONLY, 0644)
+	if err == nil {
+		outfile, outerr := os.OpenFile(filename+".tmp", os.O_CREATE|os.O_WRONLY, 0644)
+		defer file.Close()
+		if outerr == nil {
+			defer outfile.Close()
+
+			scanner := bufio.NewScanner(file)
+			for scanner.Scan() {
+				line := scanner.Text()
+				outfile.WriteString(line + "\n")
+			}
+			os.Remove(filename)
+			os.Rename(filename+".tmp", filename)
+		}
+	}
+	return
 }
