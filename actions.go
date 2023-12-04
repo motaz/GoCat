@@ -26,9 +26,12 @@ type IndexTemplate struct {
 }
 
 type DetailFile struct {
-	AppName   string
-	IsRunning bool
-	Port      string
+	AppName    string
+	IsRunning  bool
+	LastStatus string
+	StatusTime time.Time
+	Port       string
+	Counter    int
 }
 
 func checkSession(w http.ResponseWriter, r *http.Request) (bool, string) {

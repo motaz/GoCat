@@ -119,6 +119,7 @@ func upload(w http.ResponseWriter, r *http.Request, indexTemplate *IndexTemplate
 			var details DetailFile
 			details.Port = port
 			details.AppName = aname
+			details.Counter = 0
 			err = writeConfigFile(details, infoFilename, *indexTemplate)
 
 		}
@@ -147,13 +148,16 @@ func writeStartScript(dir string, filename string) error {
 	scriptFileName := dir + "start.sh"
 	script := "#!/bin/bash\n" +
 		"cd " + dir + "\n" +
-		"nohup ./" + filename + "&\n"
+		"nohup ./" + filename + " > log.out 2>&1 &\n"
 	err := writeToFile(scriptFileName, script)
 	return err
 }
 
 func setConfigFile(details DetailFile, infoFilename string) error {
 
+	if !strings.Contains(infoFilename, "/") {
+		infoFilename = getInfoFilename(infoFilename)
+	}
 	jsonData, err := json.Marshal(details)
 
 	err = writeToFile(infoFilename, string(jsonData))

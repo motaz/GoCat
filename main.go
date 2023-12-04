@@ -19,7 +19,7 @@ func main() {
 	println("OS,Arch: ", runtime.GOOS, runtime.GOARCH)
 	println("No of CPUs: ", runtime.NumCPU())
 
-	initApplications()
+	checkClosedApps("GoCat start")
 	go check()
 	mytemplate = template.Must(template.ParseGlob("templates/*.html"))
 

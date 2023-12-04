@@ -39,26 +39,6 @@ func getAppDir() string {
 	return dir
 }
 
-func initApplications() {
-	list, err := readRunningApps()
-	if err == nil {
-		for _, appName := range list {
-			if strings.Trim(appName, "") != "" {
-				isRunning, _ := isAppRunning(appName)
-				if isRunning {
-					writeToLog(appName + " is already running")
-				} else {
-					errorMsg := runApp(appName)
-					writeToLog("Starting: " + appName)
-					if errorMsg != "" {
-						writeToLog("Error in runapp " + appName + ": " + errorMsg)
-					}
-				}
-			}
-		}
-	}
-}
-
 func getConfigValue(valuename string, defaultvalue string) (value string) {
 
 	value = codeutils.GetConfigValue("gocat.ini", valuename)
@@ -90,10 +70,10 @@ func getAppList() (apps []DetailFile) {
 	if err == nil {
 		for _, f := range files {
 			if f.IsDir() {
-				fullfilename := dir + f.Name() + "/" + f.Name()
+				fullfilename := getInfoFilename(f.Name())
 				if err == nil {
 
-					hasJson, info := readAppConfig(fullfilename + ".json")
+					hasJson, info := readAppConfig(fullfilename)
 					info.AppName = f.Name()
 					if hasJson {
 						apps = append(apps, info)
@@ -244,6 +224,9 @@ func listFiles(dir string, w http.ResponseWriter) []FileInfo {
 
 func readAppConfig(jsonfilename string) (success bool, info DetailFile) {
 
+	if !strings.Contains(jsonfilename, "/") {
+		jsonfilename = getInfoFilename(jsonfilename)
+	}
 	success = false
 
 	contents, err := ioutil.ReadFile(jsonfilename)
@@ -254,7 +237,7 @@ func readAppConfig(jsonfilename string) (success bool, info DetailFile) {
 	} else {
 		err := json.Unmarshal(contents, &info)
 		if err != nil {
-			writeToLog("Error in getPort: " + err.Error())
+			writeToLog("Error in readAppConfig: " + err.Error())
 		}
 		success = true
 		return
@@ -396,26 +379,28 @@ func writeToLog(event string) {
 	codeutils.WriteToLog(event, "gocat")
 }
 
-func readRunningApps() (list []string, err error) {
-
-	var content []byte
-	content, err = ioutil.ReadFile("running.txt")
-	if err == nil {
-
-		list = strings.Split(string(content), "\n")
-	}
-	return
-}
-
-func checkClosedApps() {
+func checkClosedApps(startType string) {
 
 	list := getAppList()
 	for _, item := range list {
 		if item.IsRunning {
 
 			isRunning, _ := isAppRunning(item.AppName)
+
 			if !isRunning {
+				_, details := readAppConfig(item.AppName)
+				details.StatusTime = time.Now()
+				details.LastStatus = startType
 				runApp(item.AppName)
+				isRunning, _ := isAppRunning(item.AppName)
+				if !isRunning {
+					details.LastStatus = "failed start"
+					details.Counter++
+					if details.Counter > 10 {
+						details.IsRunning = false
+					}
+				}
+				setConfigFile(details, item.AppName)
 				writeToLog("Starting after close/crash: " + item.AppName)
 			}
 
@@ -426,7 +411,7 @@ func checkClosedApps() {
 func check() {
 	for {
 		time.Sleep(time.Second * 10)
-		checkClosedApps()
+		checkClosedApps("crash start")
 	}
 }
 
@@ -442,9 +427,14 @@ func reWriteFile(filename, appname string) {
 			scanner := bufio.NewScanner(file)
 			for scanner.Scan() {
 				line := scanner.Text()
-				if strings.Contains(line, "&") && strings.Contains(line, appname) &&
-					!strings.Contains(line, "nohup") {
-					line = "nohup " + line
+				if strings.Contains(line, "&") && strings.Contains(line, appname) {
+					if !strings.Contains(line, "nohup") {
+						line = "nohup " + line
+					}
+					if !strings.Contains(line, ">") {
+						indx := strings.Index(line, "&")
+						line = line[:indx] + " > log.out 2>&1  " + line[indx:]
+					}
 				}
 				outfile.WriteString(line + "\n")
 			}

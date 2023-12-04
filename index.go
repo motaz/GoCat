@@ -167,6 +167,12 @@ func isActionHappening(actionType StartStopType, appname string) bool {
 
 }
 
+func getInfoFilename(appname string) (infoFilename string) {
+
+	infoFilename = getAppDir() + appname + "/" + appname + ".json"
+	return
+}
+
 func startAndstopApp(actionType StartStopType, r *http.Request, indexTemplate *IndexTemplate) {
 
 	appname := r.FormValue("appname")
@@ -184,11 +190,14 @@ func startAndstopApp(actionType StartStopType, r *http.Request, indexTemplate *I
 	} else {
 		var out string
 		var err string
-		infoFilename := getAppDir() + appname + "/" + appname + ".json"
-		_, details := readAppConfig(infoFilename)
+
+		_, details := readAppConfig(appname)
+		details.StatusTime = time.Now()
+		details.Counter = 0
 
 		if actionType == START {
 			details.IsRunning = true
+			details.LastStatus = "manual start"
 			errorMsg := runApp(appname)
 			if errorMsg != "" {
 				indexTemplate.Message = "Error: " + errorMsg
@@ -198,8 +207,9 @@ func startAndstopApp(actionType StartStopType, r *http.Request, indexTemplate *I
 		} else {
 			out, err = executeKill(appname)
 			details.IsRunning = false
+			details.LastStatus = "manual stop"
 		}
-		setConfigFile(details, infoFilename)
+		setConfigFile(details, appname)
 
 		if err == "" {
 
