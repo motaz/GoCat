@@ -24,7 +24,8 @@
         <h2>Web Applications</h2>
 		<table class='bordertable'>
 		<tr style='background:#aaaa88;'><th>Application</th><th>Port</th>
-		<th>Update Time</th><th>Status</th><th>Running Since</th><th>Run</th><th>Stop</th></tr>
+		<th>Update Time</th><th>Status</th><th>Running Since</th><th>Last Status</th>
+    <th>Status Time</th> <th>Run</th><th>Stop</th></tr>
 		{{range .Apps}}
 		  <tr id={{.Class}}>
 		  <form method=POST>
@@ -44,6 +45,9 @@
 
 		  {{.Running}}</td>
       <td style='color:{{.SinceColor}}';>{{.RunningSince}}</td>
+      
+      <td  style='color:{{.StatusColor}}';>{{.LastStatus}}</td>
+      <td style='color:{{.TimeColor}}'>{{.StatusTime.Format "2006-01-02 15:04" }}</td>
 		
 		  <td>
 		  {{if not .IsRunning}}

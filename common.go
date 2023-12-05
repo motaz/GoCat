@@ -59,6 +59,10 @@ type AppInfo struct {
 	IsRunning    bool
 	RunningSince string
 	SinceColor   string
+	LastStatus   string
+	StatusTime   time.Time
+	StatusColor  string
+	TimeColor    string
 }
 
 func getAppList() (apps []DetailFile) {
@@ -121,6 +125,19 @@ func listApplications(w http.ResponseWriter, r *http.Request) []AppInfo {
 					var info DetailFile
 					hasJson, info = readAppConfig(fullfilename + ".json")
 					afile.Port = info.Port
+					afile.LastStatus = info.LastStatus
+					afile.StatusTime = info.StatusTime
+					if strings.Contains(afile.LastStatus, "failed") {
+						afile.StatusColor = "red"
+					} else if strings.Contains(afile.LastStatus, "stop") ||
+						strings.Contains(afile.LastStatus, "crash") {
+						afile.StatusColor = "#aa4444"
+					}
+					if afile.StatusTime.After(time.Now().Add(time.Hour * -12)) {
+						afile.TimeColor = "blue"
+					} else if afile.StatusTime.After(time.Now().Add(time.Hour * -24)) {
+						afile.TimeColor = "navy"
+					}
 				}
 
 				if hasJson {
@@ -433,7 +450,7 @@ func reWriteFile(filename, appname string) {
 					}
 					if !strings.Contains(line, ">") {
 						indx := strings.Index(line, "&")
-						line = line[:indx] + " > log.out 2>&1  " + line[indx:]
+						line = line[:indx] + " >> log.out 2>&1  " + line[indx:]
 					}
 				}
 				outfile.WriteString(line + "\n")

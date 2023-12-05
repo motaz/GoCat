@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-const VERSION = "1.0.40 r30-Nov"
+const VERSION = "1.0.42 r5-Dec"
 
 var mytemplate *template.Template
 

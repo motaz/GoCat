@@ -148,7 +148,7 @@ func writeStartScript(dir string, filename string) error {
 	scriptFileName := dir + "start.sh"
 	script := "#!/bin/bash\n" +
 		"cd " + dir + "\n" +
-		"nohup ./" + filename + " > log.out 2>&1 &\n"
+		"nohup ./" + filename + " >> log.out 2>&1 &\n"
 	err := writeToFile(scriptFileName, script)
 	return err
 }
