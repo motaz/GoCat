@@ -2,6 +2,8 @@ package main
 
 import (
 	"bufio"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -13,16 +15,22 @@ import (
 	"github.com/motaz/codeutils"
 )
 
+type HeaderValues struct {
+	Version   string
+	Message   string
+	Class     string
+	Login     string
+	Linuxuser string
+	Hostname  string
+}
+
 type IndexTemplate struct {
-	Version     string
-	Message     string
-	Class       string
+	HeaderValues
 	NeedRefresh bool
-	Login       string
-	Linuxuser   string
-	Remove      string
-	Apps        []AppInfo
-	ShelfApps   []ShelfAppInfo
+
+	Remove    string
+	Apps      []AppInfo
+	ShelfApps []ShelfAppInfo
 }
 
 type DetailFile struct {
@@ -34,12 +42,61 @@ type DetailFile struct {
 	Counter    int
 }
 
-func checkSession(w http.ResponseWriter, r *http.Request) (bool, string) {
+type SessionType struct {
+	Username string
+	Expiary  time.Time
+}
 
+func saveSession(sessionValue, username string, keep bool) (err error) {
+
+	dir := codeutils.GetCurrentAppDir() + "/sessions"
+	if !codeutils.IsFileExists(dir) {
+		os.Mkdir(dir, os.ModePerm)
+	}
+	filename := dir + "/" + sessionValue
+	var session SessionType
+	session.Username = username
+	if keep {
+		session.Expiary = time.Now().AddDate(0, 1, 0)
+	} else {
+		session.Expiary = time.Now().Add(time.Hour * 8)
+	}
+	data, _ := json.Marshal(session)
+	err = writeToFile(filename, data)
+
+	return
+}
+
+func readSession(sessionValue string) (session SessionType, err error) {
+
+	var data []byte
+	filename := codeutils.GetCurrentAppDir() + "/sessions/" + sessionValue
+	data, err = os.ReadFile(filename)
+	if err == nil {
+		err = json.Unmarshal(data, &session)
+		if err == nil {
+			if time.Now().After(session.Expiary) {
+				err = errors.New("Session has expired")
+			}
+		}
+	}
+	return
+
+}
+
+func removeSession(sessionValue string) {
+
+	filename := codeutils.GetCurrentAppDir() + "/sessions/" + sessionValue
+	os.Remove(filename)
+}
+
+// backward compatability, temporary
+func readOldSession(w http.ResponseWriter, r *http.Request) (valid bool, login string) {
+
+	writeToLog("Old session")
 	sessionCookie, err := r.Cookie("gocatsession")
 	loginCookie, err2 := r.Cookie("login")
-	login := "="
-	valid := false
+	valid = false
 	if err == nil || err2 == nil {
 		var asession string
 		var currentSession string
@@ -50,16 +107,42 @@ func checkSession(w http.ResponseWriter, r *http.Request) (bool, string) {
 			valid = asession == currentSession
 
 		}
-		login = loginCookie.Value
-
+		if err2 == nil {
+			login = loginCookie.Value
+		}
 	}
+	return
+}
+
+func checkSession(w http.ResponseWriter, r *http.Request) (valid bool, username string) {
+
+	sessionCookie, err := r.Cookie("gocatsession")
+	valid = err == nil
+	if valid {
+		var session SessionType
+		session, err = readSession(sessionCookie.Value)
+		valid = err == nil
+		if !valid {
+			writeToLog("Error in reading file checkSession: " + err.Error())
+		} else {
+			username = session.Username
+
+		}
+
+	} else {
+		writeToLog("Error in reading cookies checkSession: " + err.Error())
+	}
+	if !valid {
+		valid, username = readOldSession(w, r) // should be removed in newer versions
+	}
+
 	if !valid {
 		writeToLog("Invalid session, redrecting to login, from: " + r.RemoteAddr)
 
-		http.Redirect(w, r, "/gocat/login", 307)
+		http.Redirect(w, r, "/gocat/login", http.StatusTemporaryRedirect)
 	}
 
-	return valid, login
+	return
 }
 
 type OutputData struct {
@@ -81,8 +164,10 @@ func login(w http.ResponseWriter, r *http.Request) {
 		result.IsInvalid = false
 		result.Version = VERSION
 		if r.FormValue("submitlogin") != "" {
+			keep := r.FormValue("keeplogin") == "1"
+
 			if checkLogin(r.FormValue("login"), r.FormValue("password")) {
-				setLoginCookies(w, r)
+				setLoginCookies(w, r, keep)
 				w.Write([]byte("<script>document.location='/gocat/';</script>"))
 				writeToLog("Successful login for " + r.FormValue("login") + ", from: " + r.RemoteAddr)
 
@@ -126,7 +211,7 @@ func setup(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func setLoginCookies(w http.ResponseWriter, r *http.Request) {
+func setLoginCookies(w http.ResponseWriter, r *http.Request, keepSession bool) {
 
 	var expiration time.Time
 
@@ -137,12 +222,10 @@ func setLoginCookies(w http.ResponseWriter, r *http.Request) {
 		expiration = time.Now().Add(time.Hour * 8)
 
 	}
-	sessionValue := GetMD5Hash(r.FormValue("login") + "9012")
+	sessionValue := GetMD5Hash(r.UserAgent() + time.Now().String())
+	saveSession(sessionValue, r.FormValue("login"), keepSession)
 	cookie := http.Cookie{Name: "gocatsession", Value: sessionValue, Expires: expiration}
-
-	loginCookie := http.Cookie{Name: "login", Value: r.FormValue("login"), Expires: expiration}
 	http.SetCookie(w, &cookie)
-	http.SetCookie(w, &loginCookie)
 }
 
 func checkLogin(username string, userpassword string) bool {
@@ -157,14 +240,11 @@ func checkLogin(username string, userpassword string) bool {
 }
 
 type ApplicationInfo struct {
-	Version     string
+	HeaderValues
 	AppName     string
 	Port        string
 	Dir         string
-	Message     string
-	Login       string
 	IsSubFolder bool
-	Linuxuser   string
 	Files       []FileInfo
 
 	HasUpload     bool
@@ -274,56 +354,59 @@ func changePort(configFileName string, r *http.Request) {
 
 func app(w http.ResponseWriter, r *http.Request) {
 
-	_, login := checkSession(w, r)
-	var applicationInfo ApplicationInfo
-	applicationInfo.Login = login
-	applicationInfo.HasUpload = false
-	applicationInfo.Linuxuser = getLinuxUser()
+	valid, login := checkSession(w, r)
+	if valid {
+		var applicationInfo ApplicationInfo
+		applicationInfo.Login = login
+		applicationInfo.Hostname, _ = os.Hostname()
+		applicationInfo.HasUpload = false
+		applicationInfo.Linuxuser = getLinuxUser()
 
-	if r.FormValue("upload") != "" {
+		if r.FormValue("upload") != "" {
 
-		applicationInfo.UploadedFiles = uploadfiles(w, r)
-		if len(applicationInfo.UploadedFiles) > 0 {
-			applicationInfo.HasUpload = true
+			applicationInfo.UploadedFiles = uploadfiles(w, r)
+			if len(applicationInfo.UploadedFiles) > 0 {
+				applicationInfo.HasUpload = true
 
+			}
 		}
-	}
-	appname := r.FormValue("appname")
-	dir := getAppDir() + appname
-	removeFile(dir, w, r)
-	renameFile(dir, w, r)
-	saveNewFile(dir, &applicationInfo, w, r)
+		appname := r.FormValue("appname")
+		dir := getAppDir() + appname
+		removeFile(dir, w, r)
+		renameFile(dir, w, r)
+		saveNewFile(dir, &applicationInfo, w, r)
 
-	configFileName := dir + "/" + appname + ".json"
-	changePort(configFileName, r)
-	_, info := readAppConfig(configFileName)
+		configFileName := dir + "/" + appname + ".json"
+		changePort(configFileName, r)
+		_, info := readAppConfig(configFileName)
 
-	applicationInfo.Port = info.Port
+		applicationInfo.Port = info.Port
 
-	files := listFiles(dir, w)
-	applicationInfo.Version = VERSION
-	applicationInfo.AppName = appname
-	applicationInfo.Dir = dir
-	applicationInfo.IsSubFolder = strings.Contains(appname, "/")
+		files := listFiles(dir, w)
+		applicationInfo.Version = VERSION
+		applicationInfo.AppName = appname
+		applicationInfo.Dir = dir
+		applicationInfo.IsSubFolder = strings.Contains(appname, "/")
 
-	applicationInfo.Files = files
+		applicationInfo.Files = files
 
-	editFile(dir, &applicationInfo, w, r)
-	saveFile(dir, &applicationInfo, w, r)
-	showNewFile(dir, &applicationInfo, w, r)
-	if r.FormValue("remove") != "" {
-		applicationInfo.RemoveFile = true
-		applicationInfo.RemoveFileName = r.FormValue("editfile")
-	}
+		editFile(dir, &applicationInfo, w, r)
+		saveFile(dir, &applicationInfo, w, r)
+		showNewFile(dir, &applicationInfo, w, r)
+		if r.FormValue("remove") != "" {
+			applicationInfo.RemoveFile = true
+			applicationInfo.RemoveFileName = r.FormValue("editfile")
+		}
 
-	if r.FormValue("rename") != "" {
-		applicationInfo.RenameFile = true
-		applicationInfo.RenameFileName = r.FormValue("renamefile")
-	}
+		if r.FormValue("rename") != "" {
+			applicationInfo.RenameFile = true
+			applicationInfo.RenameFileName = r.FormValue("renamefile")
+		}
 
-	err := mytemplate.ExecuteTemplate(w, "application.html", applicationInfo)
-	if err != nil {
-		w.Write([]byte("Error: " + err.Error()))
+		err := mytemplate.ExecuteTemplate(w, "application.html", applicationInfo)
+		if err != nil {
+			w.Write([]byte("Error: " + err.Error()))
+		}
 	}
 
 }
@@ -344,45 +427,48 @@ func WriteToFile(filename string, data string) error {
 }
 
 func download(w http.ResponseWriter, r *http.Request) {
+	valid, _ := checkSession(w, r)
+	if valid {
+		filename := r.FormValue("filename")
+		filename = getAppDir() + filename
 
-	filename := r.FormValue("filename")
-	filename = getAppDir() + filename
+		file, e := os.Open(filename)
+		if e != nil {
+			w.Header().Add("Content-Type", "text/html;charset=UTF-8")
+			w.Header().Add("encoding", "UTF-8")
 
-	file, e := os.Open(filename)
-	if e != nil {
-		w.Header().Add("Content-Type", "text/html;charset=UTF-8")
-		w.Header().Add("encoding", "UTF-8")
+			w.Write([]byte("Error: " + e.Error()))
 
-		w.Write([]byte("Error: " + e.Error()))
+		} else {
+			onlyname := filename[strings.LastIndex(filename, "/"):]
+			w.Header().Set("Content-Disposition", "attachment; filename="+onlyname)
 
-	} else {
-		onlyname := filename[strings.LastIndex(filename, "/"):]
-		w.Header().Set("Content-Disposition", "attachment; filename="+onlyname)
+			read := bufio.NewReader(file)
 
-		read := bufio.NewReader(file)
-
-		data := make([]byte, 4096)
-		for {
-			numread, err := read.Read(data)
-			if (err != nil) && (err == io.EOF) {
-				break
+			data := make([]byte, 4096)
+			for {
+				numread, err := read.Read(data)
+				if (err != nil) && (err == io.EOF) {
+					break
+				}
+				w.Write(data[:numread])
 			}
-			w.Write(data[:numread])
 		}
 	}
-
 }
 
 func logout(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Add("Content-Type", "text/html;charset=UTF-8")
 	w.Header().Add("encoding", "UTF-8")
+	sessionCookie, err := r.Cookie("gocatsession")
+	if err == nil {
+		removeSession(sessionCookie.Value)
+		expiration := time.Now()
+		cookie := http.Cookie{Name: "gocatsession", Value: "-", Expires: expiration}
+		http.SetCookie(w, &cookie)
+	}
 
-	expiration := time.Now()
-	cookie := http.Cookie{Name: "gocatsession", Value: "-", Expires: expiration}
-	http.SetCookie(w, &cookie)
-	cookie2 := http.Cookie{Name: "login", Value: "-", Expires: expiration}
-	http.SetCookie(w, &cookie2)
-	http.Redirect(w, r, "/gocat/login", 307)
+	http.Redirect(w, r, "/gocat/login", http.StatusTemporaryRedirect)
 
 }

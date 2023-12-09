@@ -2,6 +2,7 @@
 package main
 
 import (
+	"fmt"
 	"html/template"
 	"net/http"
 
@@ -9,7 +10,7 @@ import (
 	"strings"
 )
 
-const VERSION = "1.0.42 r5-Dec"
+const VERSION = "1.0.44 r9-Dec"
 
 var mytemplate *template.Template
 
@@ -45,6 +46,7 @@ func main() {
 	err := http.ListenAndServe(port, nil)
 	if err != nil {
 		writeToLog("Error: " + err.Error())
+		fmt.Println("Error: ", err.Error())
 	}
 
 }

@@ -28,13 +28,15 @@ type FileInfo struct {
 	IsEdit   bool
 }
 
-func writeToFile(filename string, contents string) error {
-	err := ioutil.WriteFile(filename, []byte(contents), 0644)
+func writeToFile(filename string, contents []byte) error {
+
+	err := ioutil.WriteFile(filename, contents, 0644)
 	return err
 
 }
 
 func getAppDir() string {
+
 	dir := codeutils.GetCurrentAppDir() + "/apps/"
 	return dir
 }
@@ -100,15 +102,6 @@ func listApplications(w http.ResponseWriter, r *http.Request) []AppInfo {
 			address = address[:strings.LastIndex(address, ":")]
 		}
 
-		file, fileerror := os.Create("running.txt")
-		var writer *bufio.Writer
-		if fileerror == nil {
-
-			defer file.Close()
-
-			writer = bufio.NewWriter(file)
-			defer writer.Flush()
-		}
 		var list []AppInfo
 		for _, f := range files {
 			if f.IsDir() {
@@ -152,9 +145,6 @@ func listApplications(w http.ResponseWriter, r *http.Request) []AppInfo {
 					if afile.IsRunning {
 						afile.Running = "Running"
 
-						if fileerror == nil {
-							writer.WriteString(afile.Filename + "\n")
-						}
 					} else {
 						afile.Running = "Stopped"
 					}

@@ -52,6 +52,8 @@ func index(w http.ResponseWriter, r *http.Request) {
 	valid, login := checkSession(w, r)
 	if valid {
 		var indexTemplate IndexTemplate
+
+		indexTemplate.Hostname, _ = os.Hostname()
 		indexTemplate.Login = login
 		indexTemplate.Version = VERSION
 		indexTemplate.Linuxuser = getLinuxUser()
