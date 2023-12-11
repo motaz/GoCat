@@ -44,18 +44,34 @@ type DetailFile struct {
 
 type SessionType struct {
 	Username string
+	Hash     string
 	Expiary  time.Time
 }
 
-func saveSession(sessionValue, username string, keep bool) (err error) {
+func getHash(userAgent, username, ip string) (hash string) {
+
+	if strings.Contains(ip, ".") {
+		ip = ip[:strings.LastIndex(ip, ".")]
+	} else if strings.Contains(ip, ":") && len(ip) > 30 {
+		ip = ip[:30]
+	}
+	hash = codeutils.GetMD5(userAgent + username + ip)
+	return
+}
+
+func saveSession(r *http.Request, sessionValue string, keep bool) (err error) {
 
 	dir := codeutils.GetCurrentAppDir() + "/sessions"
 	if !codeutils.IsFileExists(dir) {
 		os.Mkdir(dir, os.ModePerm)
 	}
+	username := r.FormValue("login")
 	filename := dir + "/" + sessionValue
 	var session SessionType
 	session.Username = username
+	ip := codeutils.GetRemoteIP(r)
+	agent := r.UserAgent()
+	session.Hash = getHash(agent, username, ip)
 	if keep {
 		session.Expiary = time.Now().AddDate(0, 1, 0)
 	} else {
@@ -78,6 +94,7 @@ func readSession(sessionValue string) (session SessionType, err error) {
 			if time.Now().After(session.Expiary) {
 				err = errors.New("Session has expired")
 			}
+
 		}
 	}
 	return
@@ -124,7 +141,13 @@ func checkSession(w http.ResponseWriter, r *http.Request) (valid bool, username 
 		valid = err == nil
 		if !valid {
 			writeToLog("Error in reading file checkSession: " + err.Error())
-		} else {
+		} else if session.Hash != "" { // this condition should be removed
+			ip := codeutils.GetRemoteIP(r)
+			hash := getHash(r.UserAgent(), session.Username, ip)
+			valid = hash == session.Hash
+
+		}
+		if valid {
 			username = session.Username
 
 		}
@@ -169,12 +192,14 @@ func login(w http.ResponseWriter, r *http.Request) {
 			if checkLogin(r.FormValue("login"), r.FormValue("password")) {
 				setLoginCookies(w, r, keep)
 				w.Write([]byte("<script>document.location='/gocat/';</script>"))
-				writeToLog("Successful login for " + r.FormValue("login") + ", from: " + r.RemoteAddr)
+				writeToLog("Successful login for " + r.FormValue("login") + ", from: " +
+					r.RemoteAddr)
 
 			} else {
 				result.ErrorMsg = "Invalid username/and or password"
 				result.IsInvalid = true
-				writeToLog("Invalid login for: " + r.FormValue("login") + ", from: " + r.RemoteAddr)
+				writeToLog("Invalid login for: " + r.FormValue("login") + ", from: " +
+					r.RemoteAddr)
 			}
 		}
 		err := mytemplate.ExecuteTemplate(w, "login.html", result)
@@ -223,7 +248,7 @@ func setLoginCookies(w http.ResponseWriter, r *http.Request, keepSession bool) {
 
 	}
 	sessionValue := GetMD5Hash(r.UserAgent() + time.Now().String())
-	saveSession(sessionValue, r.FormValue("login"), keepSession)
+	saveSession(r, sessionValue, keepSession)
 	cookie := http.Cookie{Name: "gocatsession", Value: sessionValue, Expires: expiration}
 	http.SetCookie(w, &cookie)
 }

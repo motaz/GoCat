@@ -169,7 +169,7 @@ h6 {
 #wrapper {
 	width:100%;
 	margin:10 auto;
-	padding:20px 10 10px 10;
+	padding:10px 10 0px 0;
 }
 
 /*----start header----*/
@@ -179,8 +179,8 @@ h6 {
 
 #header .top_banner{
 	background:url(../images/header.jpg) left top;
-	height:95px;
-	padding:6px 5px 0 5px;
+	height:50px;
+	padding:0 0 0 0;
 	border:#6E6065 solid 1px;
 }
 
@@ -210,8 +210,8 @@ h6 {
 }
 
 .navigation{
-	margin:0px 0px 30px;
-	padding:11px 5px;
+	margin:0px 0px 0px;
+	padding:5px 5px;
 	border:#BBBFB4 solid 1px;
 	background: #ECF0EC;
 }
@@ -255,7 +255,7 @@ h6 {
 
 #page_content{
 	background:#FFFFFF;
-	padding:10px;
+	padding:5px;
 	border:#B1B1B1 solid 1px;
 }
 
@@ -267,22 +267,22 @@ h6 {
 }
 
 #page_content .right_section .top_content{
-	padding:15px 10px 10px 10px;
+	padding:5px 5px 5px 5px;
 	margin-left:5px;
 }
 
 #page_content .right_section .top_content .column_one{
 	width:295px;
 	float:left;
-	margin-bottom:10px;
-	margin-left:10px;
+	margin-bottom:5px;
+	margin-left:5px;
 }
 
 
 #page_content .right_section .top_content .column_two{
 	width:100%;
 	float:right;
-	margin-bottom:20px;
+	margin-bottom:5px;
 }
 
 a.btn{
@@ -306,7 +306,7 @@ a.btn:hover{
 
 .border_left{
 	border-left:#cacfbb dotted 1px;
-	padding-left:20px;
+	padding-left:5px;
 }
 
 .border_none{

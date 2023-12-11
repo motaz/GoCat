@@ -24,19 +24,19 @@
      <td> <h2>GoCat</h2></td>
 	{{ if .Login }}
 	<td></td>
-	<td>User:<font color=blue>{{.Login}}</font></td>
+	<td>User: <font color=blue>{{.Login}}</font></td>
 	
 	<td></td>
 	<td><a href="/gocat/logout">Logout</a></td>
 	{{end}}
   {{ if .Version }}
-	<td>{{.Version}}</td>
+	<td>V. {{.Version}}</td>
   {{end}}
 	</tr>
 	
 	</table>
-
-    </div>
+   </div>
+   </div>
 
   </div>
 {{end}}
@@ -45,7 +45,7 @@
   {{define "menu"}}
 	<div class="navigation">
       <ul>
-        <li><a href="/gocat">Home</a></li>
+        <li><a href="/gocat"><b>Home</b></a></li>
         <li>Host <font color=gray>{{.Hostname}}</font></li>
 		    <li>OS user: <font color=gray>{{.Linuxuser}}</font></li>
 
@@ -57,7 +57,7 @@
 	{{define "footer"}}
     <div class="clear"></div>
     
-    <div id="footer">Copyright &copy; 2018 2021. Developed by 
+    <div id="footer">Copyright &copy; 2018 2023. Developed by 
        <a href="http://www.code.sd" target="_blank">Code.sd</a><br>
 	
     </div>

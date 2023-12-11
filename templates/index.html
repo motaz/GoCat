@@ -1,12 +1,9 @@
 
-
 {{ template "header" . }}
 
    <div id="page_content">
 
 {{ template "menu" . }}
-
-
 
 <p id="{{.Class}}">
 {{.Message}}
@@ -21,7 +18,7 @@
 {{end}}
     <div class="right_section">
       <div class="common_content">
-        <h2>Web Applications</h2>
+        <h3>Applications (Services)</h3>
 		<table class='bordertable'>
 		<tr style='background:#aaaa88;'><th>Application</th><th>Port</th>
 		<th>Update Time</th><th>Status</th><th>Running Since</th><th>Last Status</th>
@@ -68,7 +65,7 @@
 		{{end}}
 		</table>
         <hr>
-		<h2>Shelf</h2>
+		<h3>Shelf</h3>
 		<table>
 		{{range .ShelfApps}}
 		<tr><td>{{.FileName}}<br/>
@@ -100,7 +97,7 @@
     {{end}}
     
 		<form method=POST enctype="multipart/form-data">
-		<h3>Upload Application</h3>
+		<h3>Upload New/Update Application</h3>
 		Port <input type=text name=port size=20 /><br/>
 		<input type=checkbox name=shelf value=1 /> Upload to Shelf<br/><br/>
 		<input type=file name="file" class=button />
