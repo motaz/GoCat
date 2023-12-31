@@ -48,14 +48,9 @@ type SessionType struct {
 	Expiary  time.Time
 }
 
-func getHash(userAgent, username, ip string) (hash string) {
+func getHash(userAgent, username string) (hash string) {
 
-	if strings.Contains(ip, ".") {
-		ip = ip[:strings.LastIndex(ip, ".")]
-	} else if strings.Contains(ip, ":") && len(ip) > 30 {
-		ip = ip[:30]
-	}
-	hash = codeutils.GetMD5(userAgent + username + ip)
+	hash = codeutils.GetMD5(userAgent + username)
 	return
 }
 
@@ -69,9 +64,8 @@ func saveSession(r *http.Request, sessionValue string, keep bool) (err error) {
 	filename := dir + "/" + sessionValue
 	var session SessionType
 	session.Username = username
-	ip := codeutils.GetRemoteIP(r)
 	agent := r.UserAgent()
-	session.Hash = getHash(agent, username, ip)
+	session.Hash = getHash(agent, username)
 	if keep {
 		session.Expiary = time.Now().AddDate(0, 1, 0)
 	} else {
@@ -142,8 +136,7 @@ func checkSession(w http.ResponseWriter, r *http.Request) (valid bool, username 
 		if !valid {
 			writeToLog("Error in reading file checkSession: " + err.Error())
 		} else if session.Hash != "" { // this condition should be removed
-			ip := codeutils.GetRemoteIP(r)
-			hash := getHash(r.UserAgent(), session.Username, ip)
+			hash := getHash(r.UserAgent(), session.Username)
 			valid = hash == session.Hash
 
 		}
@@ -154,9 +147,6 @@ func checkSession(w http.ResponseWriter, r *http.Request) (valid bool, username 
 
 	} else {
 		writeToLog("Error in reading cookies checkSession: " + err.Error())
-	}
-	if !valid {
-		valid, username = readOldSession(w, r) // should be removed in newer versions
 	}
 
 	if !valid {
@@ -248,6 +238,7 @@ func setLoginCookies(w http.ResponseWriter, r *http.Request, keepSession bool) {
 
 	}
 	sessionValue := GetMD5Hash(r.UserAgent() + time.Now().String())
+
 	saveSession(r, sessionValue, keepSession)
 	cookie := http.Cookie{Name: "gocatsession", Value: sessionValue, Expires: expiration}
 	http.SetCookie(w, &cookie)
