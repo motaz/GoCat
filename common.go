@@ -388,6 +388,8 @@ func writeToLog(event string) {
 
 func checkClosedApps(startType string) {
 
+	mutex.Lock()
+	defer mutex.Unlock()
 	list := getAppList()
 	for _, item := range list {
 		if item.IsRunning {

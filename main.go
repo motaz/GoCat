@@ -8,11 +8,14 @@ import (
 
 	"runtime"
 	"strings"
+	"sync"
 )
 
-const VERSION = "1.0.47 r31-Dec"
+const VERSION = "1.0.48 r25-Jan"
 
 var mytemplate *template.Template
+
+var mutex = &sync.Mutex{}
 
 func main() {
 	println("Go version: ", runtime.Version())

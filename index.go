@@ -177,6 +177,8 @@ func getInfoFilename(appname string) (infoFilename string) {
 
 func startAndstopApp(actionType StartStopType, r *http.Request, indexTemplate *IndexTemplate) {
 
+	mutex.Lock()
+	defer mutex.Unlock()
 	appname := r.FormValue("appname")
 	var label string
 	if actionType == START {
