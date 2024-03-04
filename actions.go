@@ -50,6 +50,10 @@ type SessionType struct {
 
 func getHash(userAgent, username string) (hash string) {
 
+	if len(userAgent) > 40 {
+		userAgent = userAgent[:40]
+	}
+
 	hash = codeutils.GetMD5(userAgent + username)
 	return
 }
@@ -101,30 +105,6 @@ func removeSession(sessionValue string) {
 	os.Remove(filename)
 }
 
-// backward compatability, temporary
-func readOldSession(w http.ResponseWriter, r *http.Request) (valid bool, login string) {
-
-	writeToLog("Old session")
-	sessionCookie, err := r.Cookie("gocatsession")
-	loginCookie, err2 := r.Cookie("login")
-	valid = false
-	if err == nil || err2 == nil {
-		var asession string
-		var currentSession string
-		if sessionCookie != nil && loginCookie != nil {
-			currentSession = sessionCookie.Value
-			currentUser := loginCookie.Value
-			asession = GetMD5Hash(currentUser + "9012")
-			valid = asession == currentSession
-
-		}
-		if err2 == nil {
-			login = loginCookie.Value
-		}
-	}
-	return
-}
-
 func checkSession(w http.ResponseWriter, r *http.Request) (valid bool, username string) {
 
 	sessionCookie, err := r.Cookie("gocatsession")
@@ -135,7 +115,7 @@ func checkSession(w http.ResponseWriter, r *http.Request) (valid bool, username 
 		valid = err == nil
 		if !valid {
 			writeToLog("Error in reading file checkSession: " + err.Error())
-		} else if session.Hash != "" { // this condition should be removed
+		} else {
 			hash := getHash(r.UserAgent(), session.Username)
 			valid = hash == session.Hash
 
