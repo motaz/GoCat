@@ -6,26 +6,43 @@ import (
 	"html/template"
 	"net/http"
 
+	"embed"
 	"runtime"
 	"strings"
 	"sync"
 )
 
-const VERSION = "1.0.50 r4-Feb"
+const VERSION = "1.0.51 r5-Feb"
 
 var mytemplate *template.Template
+
+//go:embed templates
+var templates embed.FS
+
+//go:embed static
+var static embed.FS
+
+func InitTemplate(embededTemplates embed.FS) (err error) {
+
+	mytemplate, err = template.ParseFS(embededTemplates, "templates/*.html")
+	if err != nil {
+		fmt.Println("error in InitTemplate: " + err.Error())
+	}
+	return
+}
 
 var mutex = &sync.Mutex{}
 
 func main() {
-	println("Go version: ", runtime.Version())
+	fmt.Println("Go version: ", runtime.Version())
 	writeToLog("Starting GoCat version : " + VERSION)
-	println("OS,Arch: ", runtime.GOOS, runtime.GOARCH)
-	println("No of CPUs: ", runtime.NumCPU())
+	fmt.Println("OS,Arch: ", runtime.GOOS, runtime.GOARCH)
+	fmt.Println("No of CPUs: ", runtime.NumCPU())
 
 	checkClosedApps("GoCat start")
 	go check()
-	mytemplate = template.Must(template.ParseGlob("templates/*.html"))
+	InitTemplate(templates)
+	http.Handle("/gocat/static/", http.StripPrefix("/gocat/", http.FileServer(http.FS(static))))
 
 	http.HandleFunc("/", redirectToIndex)
 	http.HandleFunc("/gocat", index)
@@ -35,16 +52,14 @@ func main() {
 	http.HandleFunc("/gocat/app", app)
 	http.HandleFunc("/gocat/download", download)
 	http.HandleFunc("/gocat/logout", logout)
-	fs := SetCacheHeader(http.FileServer(http.Dir("static")))
 
-	http.Handle("/gocat/static/", http.StripPrefix("/gocat/static/", fs))
 	port := getConfigValue("port", ":2009")
-	println("GoCat version: ", VERSION)
-	println("Listening on port: ", port)
+	fmt.Println("GoCat version: ", VERSION)
+	fmt.Println("Listening on port: ", port)
 	if !strings.Contains(port, ":") {
 		port = ":" + port
 	}
-	println("http://localhost" + port)
+	fmt.Println("http://localhost" + port)
 
 	err := http.ListenAndServe(port, nil)
 	if err != nil {
