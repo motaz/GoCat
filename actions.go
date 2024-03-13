@@ -224,15 +224,34 @@ func setLoginCookies(w http.ResponseWriter, r *http.Request, keepSession bool) {
 	http.SetCookie(w, &cookie)
 }
 
-func checkLogin(username string, userpassword string) bool {
+func oldCheckLogin(username string, userpassword string) (success bool) {
 
 	user := codeutils.GetConfigValue("gocat.ini", "user")
 
 	configpassword := codeutils.GetConfigValue("gocat.ini", "password")
 	hashpassword := GetMD5Hash(userpassword)
 
-	return (user == username) && (configpassword == hashpassword)
+	success = (user == username) && (configpassword == hashpassword)
+	return
+}
 
+func checkLogin(username string, userpassword string) (success bool) {
+
+	list, _ := readUsersFile()
+	if len(list) == 0 {
+		success = oldCheckLogin(username, userpassword)
+		if success {
+			err := setUser(username, userpassword, true)
+			if err == nil {
+				codeutils.SetConfigValue("gocat.ini", "password", "-")
+			}
+		}
+	} else {
+		found, hashpassword, _ := getUserCredentials(username)
+		success = found && hashpassword == getPasswordHash(username, userpassword)
+	}
+
+	return
 }
 
 type ApplicationInfo struct {

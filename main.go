@@ -12,7 +12,7 @@ import (
 	"sync"
 )
 
-const VERSION = "1.0.51 r5-Feb"
+const VERSION = "1.0.52 r13-Mar"
 
 var mytemplate *template.Template
 
