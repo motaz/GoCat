@@ -12,7 +12,7 @@ import (
 	"sync"
 )
 
-const VERSION = "1.0.52 r13-Mar"
+const VERSION = "1.0.52 r15-Mar"
 
 var mytemplate *template.Template
 
@@ -52,6 +52,7 @@ func main() {
 	http.HandleFunc("/gocat/app", app)
 	http.HandleFunc("/gocat/download", download)
 	http.HandleFunc("/gocat/logout", logout)
+	http.HandleFunc("/gocat/changepass", changePass)
 
 	port := getConfigValue("port", ":2009")
 	fmt.Println("GoCat version: ", VERSION)

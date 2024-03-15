@@ -182,7 +182,7 @@ func login(w http.ResponseWriter, r *http.Request) {
 func setup(w http.ResponseWriter, r *http.Request) {
 
 	if codeutils.IsFileExists("gocat.ini") {
-		http.Redirect(w, r, "/gocat/login", 307)
+		http.Redirect(w, r, "/gocat/login", http.StatusTemporaryRedirect)
 
 	} else {
 		var result OutputData
@@ -195,7 +195,7 @@ func setup(w http.ResponseWriter, r *http.Request) {
 				codeutils.SetConfigValue("gocat.ini", "user", r.FormValue("login"))
 				passwordhash := GetMD5Hash(r.FormValue("password"))
 				codeutils.SetConfigValue("gocat.ini", "password", passwordhash)
-				http.Redirect(w, r, "/gocat/login", 307)
+				http.Redirect(w, r, "/gocat/login", http.StatusTemporaryRedirect)
 
 			}
 		}
@@ -247,8 +247,9 @@ func checkLogin(username string, userpassword string) (success bool) {
 			}
 		}
 	} else {
-		found, hashpassword, _ := getUserCredentials(username)
-		success = found && hashpassword == getPasswordHash(username, userpassword)
+		found, hashpassword, isAdmin := getUserCredentials(username)
+		success = found && hashpassword == getPasswordHash(username,
+			userpassword, isAdmin)
 	}
 
 	return
@@ -486,4 +487,48 @@ func logout(w http.ResponseWriter, r *http.Request) {
 
 	http.Redirect(w, r, "/gocat/login", http.StatusTemporaryRedirect)
 
+}
+
+type ChangePassType struct {
+	HeaderValues
+	IsValid  bool
+	ErrorMsg string
+}
+
+func changePass(w http.ResponseWriter, r *http.Request) {
+
+	valid, login := checkSession(w, r)
+	if valid {
+		var result ChangePassType
+		result.Login = login
+		result.IsValid = true
+		currentpassword := r.FormValue("password")
+		newpassword := r.FormValue("newpassword")
+		if r.FormValue("change") != "" {
+			if (currentpassword == "") || (newpassword == "") ||
+				(newpassword != r.FormValue("confirmpassword")) {
+				result.ErrorMsg = "Invalid password"
+				result.IsValid = false
+			} else {
+				result.IsValid = checkLogin(login, currentpassword)
+				if !result.IsValid {
+					result.ErrorMsg = "Invalid password"
+				} else {
+					var isAdmin bool
+					result.IsValid, _, isAdmin = getUserCredentials(login)
+					if result.IsValid {
+						setUser(login, newpassword, isAdmin)
+						http.Redirect(w, r, "/gocat", http.StatusTemporaryRedirect)
+					} else {
+						result.ErrorMsg = "Invalid credentials"
+					}
+				}
+
+			}
+		}
+		err := mytemplate.ExecuteTemplate(w, "changepass.html", result)
+		if err != nil {
+			w.Write([]byte("Error: " + err.Error()))
+		}
+	}
 }
