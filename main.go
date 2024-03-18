@@ -9,10 +9,9 @@ import (
 	"embed"
 	"runtime"
 	"strings"
-	"sync"
 )
 
-const VERSION = "1.0.52 r15-Mar"
+const VERSION = "1.0.53 r18-Mar"
 
 var mytemplate *template.Template
 
@@ -30,8 +29,6 @@ func InitTemplate(embededTemplates embed.FS) (err error) {
 	}
 	return
 }
-
-var mutex = &sync.Mutex{}
 
 func main() {
 	fmt.Println("Go version: ", runtime.Version())

@@ -15,10 +15,13 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/motaz/codeutils"
 )
+
+var CloseMutex = &sync.Mutex{}
 
 type FileInfo struct {
 	FileName string
@@ -313,7 +316,8 @@ func runShell(runOrStart int, command string, arguments ...string) (result strin
 	if runOrStart == Run {
 		cmd.Run()
 	} else if runOrStart == Start {
-		cmd.Start()
+
+		cmd.Run()
 	}
 	result = out.String()
 	errorMsg = err.String()
@@ -388,8 +392,8 @@ func writeToLog(event string) {
 
 func checkClosedApps(startType string) {
 
-	mutex.Lock()
-	defer mutex.Unlock()
+	CloseMutex.Lock()
+	defer CloseMutex.Unlock()
 	list := getAppList()
 	for _, item := range list {
 		if item.IsRunning {
