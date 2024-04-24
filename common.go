@@ -354,10 +354,13 @@ func copyFile(sourcename string, targetname string) error {
 			}
 		}
 		if err == nil {
-			target, err := os.OpenFile(targetname, os.O_WRONLY|os.O_CREATE, 0766)
+			target, err := os.Create(targetname)
 			if err == nil {
 				defer target.Close()
 				_, err = io.Copy(target, source)
+				if err == nil {
+					CopyFileInfo(sourcename, targetname)
+				}
 			}
 		}
 
@@ -453,6 +456,35 @@ func reWriteFile(filename, appname string) {
 			}
 			os.Remove(filename)
 			os.Rename(filename+".tmp", filename)
+		}
+	}
+	return
+}
+
+func CopyFileInfo(source, target string) (err error) {
+
+	var fileInfo os.FileInfo
+	fileInfo, err = os.Stat(source)
+	if err == nil {
+
+		err = os.Chtimes(target, time.Now(), fileInfo.ModTime())
+		os.Chmod(target, fileInfo.Mode())
+	}
+	return
+}
+
+func ArchiveOldFile(appname, targetFilename string) (err error) {
+
+	if codeutils.IsFileExists(targetFilename) {
+		archivefolder := getAppDir() + appname + "/archivefiles"
+		err = os.Mkdir(archivefolder, os.ModePerm)
+
+		if err == nil {
+			index := strings.LastIndex(targetFilename, "/")
+			if index > 0 {
+				filename := targetFilename[index+1:]
+				err = copyFile(targetFilename, archivefolder+"/"+filename)
+			}
 		}
 	}
 	return

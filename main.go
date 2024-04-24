@@ -11,7 +11,7 @@ import (
 	"strings"
 )
 
-const VERSION = "1.0.53 r18-Mar"
+const VERSION = "1.0.54 r24-Apr"
 
 var mytemplate *template.Template
 
@@ -38,31 +38,35 @@ func main() {
 
 	checkClosedApps("GoCat start")
 	go check()
-	InitTemplate(templates)
-	http.Handle("/gocat/static/", http.StripPrefix("/gocat/", http.FileServer(http.FS(static))))
+	err := InitTemplate(templates)
+	if err == nil {
+		http.Handle("/gocat/static/", http.StripPrefix("/gocat/", http.FileServer(http.FS(static))))
 
-	http.HandleFunc("/", redirectToIndex)
-	http.HandleFunc("/gocat", index)
-	http.HandleFunc("/gocat/", index)
-	http.HandleFunc("/gocat/login", login)
-	http.HandleFunc("/gocat/setup", setup)
-	http.HandleFunc("/gocat/app", app)
-	http.HandleFunc("/gocat/download", download)
-	http.HandleFunc("/gocat/logout", logout)
-	http.HandleFunc("/gocat/changepass", changePass)
+		http.HandleFunc("/", redirectToIndex)
+		http.HandleFunc("/gocat", index)
+		http.HandleFunc("/gocat/", index)
+		http.HandleFunc("/gocat/login", login)
+		http.HandleFunc("/gocat/setup", setup)
+		http.HandleFunc("/gocat/app", app)
+		http.HandleFunc("/gocat/download", download)
+		http.HandleFunc("/gocat/logout", logout)
+		http.HandleFunc("/gocat/changepass", changePass)
 
-	port := getConfigValue("port", ":2009")
-	fmt.Println("GoCat version: ", VERSION)
-	fmt.Println("Listening on port: ", port)
-	if !strings.Contains(port, ":") {
-		port = ":" + port
-	}
-	fmt.Println("http://localhost" + port)
+		port := getConfigValue("port", ":2009")
+		fmt.Println("GoCat version: ", VERSION)
+		fmt.Println("Listening on port: ", port)
+		if !strings.Contains(port, ":") {
+			port = ":" + port
+		}
+		fmt.Println("http://localhost" + port)
 
-	err := http.ListenAndServe(port, nil)
-	if err != nil {
-		writeToLog("Error: " + err.Error())
-		fmt.Println("Error: ", err.Error())
+		err = http.ListenAndServe(port, nil)
+		if err != nil {
+			writeToLog("Error: " + err.Error())
+			fmt.Println("Error: ", err.Error())
+		}
+	} else {
+		fmt.Println("Error in template: ", err.Error())
 	}
 
 }

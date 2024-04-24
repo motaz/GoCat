@@ -116,6 +116,7 @@ func replaceApp(r *http.Request, indexTemplate *IndexTemplate) {
 	sourceFile := getAppDir() + "shelf.dir/" + appname
 	destFile := getAppDir() + appname + "/" + appname
 	isAlreadyRunning := stopIfRunning(appname, false)
+	ArchiveOldFile(appname, destFile)
 	err := copyFile(sourceFile, destFile)
 	if err == nil {
 

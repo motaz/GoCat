@@ -128,6 +128,7 @@ func upload(w http.ResponseWriter, r *http.Request, indexTemplate *IndexTemplate
 			if !toShelf {
 
 				err = writeStartScript(adir, aname)
+				ArchiveOldFile(aname, afilename)
 			}
 
 			copyAndPutFile(afilename, indexTemplate, file, handler.Filename,
