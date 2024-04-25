@@ -93,7 +93,7 @@ func upload(w http.ResponseWriter, r *http.Request, indexTemplate *IndexTemplate
 		// Put file in location
 		var dir, adir string
 		if toShelf {
-			dir = getAppDir() + "shelf.dir/"
+			dir = getShelfDir()
 			adir = dir
 		} else {
 			dir = getAppDir() + handler.Filename + "/"

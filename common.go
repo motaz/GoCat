@@ -477,15 +477,20 @@ func ArchiveOldFile(appname, targetFilename string) (err error) {
 
 	if codeutils.IsFileExists(targetFilename) {
 		archivefolder := getAppDir() + appname + "/archivefiles"
-		err = os.Mkdir(archivefolder, os.ModePerm)
+		os.Mkdir(archivefolder, os.ModePerm)
 
-		if err == nil {
-			index := strings.LastIndex(targetFilename, "/")
-			if index > 0 {
-				filename := targetFilename[index+1:]
-				err = copyFile(targetFilename, archivefolder+"/"+filename)
-			}
+		index := strings.LastIndex(targetFilename, "/")
+		if index > 0 {
+			filename := targetFilename[index+1:]
+			err = copyFile(targetFilename, archivefolder+"/"+filename)
 		}
+
 	}
+	return
+}
+
+func getShelfDir() (shelfDir string) {
+
+	shelfDir = getAppDir() + "shelf.dir/"
 	return
 }

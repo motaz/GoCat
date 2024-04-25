@@ -6,6 +6,9 @@
 
 {{ template "menu" . }}
 
+<p id="{{.Class}}">
+{{.Message}}
+</p>
 
     <div class="right_section">
       <div class="common_content">
@@ -26,6 +29,7 @@
 		{{end}}
 
 {{end}}
+
 
 <a href="javascript:history.back()">..Back</a>
 
@@ -74,6 +78,17 @@
 		<input type=submit name=cancel value='Cancel' class=button />
 		</form>
 {{end}}
+
+{{if  .RevertOld}}
+		<form method=post >"
+		    Revert old <b>{{.AppName}}</b> ?
+        <input type=hidden name=revertoldfile value="{{.AppName}}" >
+
+		<input type=submit name=confirmrevert value='Yes' class=button />
+		<input type=submit name=cancel value='Cancel' class=button />
+		</form>
+{{end}}
+
 		<table>
 		<tr style='background:#aaaa88;'><th>File</th><th>Edit</th><th>File Time</th>
 		  <th>File Size</th><th>Delete</th><th>Rename</th></tr>
@@ -123,6 +138,17 @@
     </form>
     <hr>
 
+{{ if .HasArchive}}
+  <form method=POST>
+    <p id="warnmessage">There is a Prevoius app version of 
+    <font color=blue>{{.AppName}}</font>,
+     date: {{.ArchiveTime}} </p>
+    <input type=submit name=revert value="Revert to previous version" />
+    <br>
+    Notes: Old version will be copied into shelf to be replaced manually
+  </form>
+  <hr>
+{{end}}
 		<form method=POST  enctype="multipart/form-data">
 		<h3>Upload file(s)</h3>
 		<input type=file name="file" multiple >

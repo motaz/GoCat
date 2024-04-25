@@ -277,6 +277,10 @@ type ApplicationInfo struct {
 
 	RenameFile     bool
 	RenameFileName string
+
+	HasArchive  bool
+	ArchiveTime string
+	RevertOld   bool
 }
 
 func removeFile(dir string, w http.ResponseWriter, r *http.Request) {
@@ -368,6 +372,37 @@ func changePort(configFileName string, r *http.Request) {
 	}
 }
 
+func revertToOld(dir string, applicationInfo *ApplicationInfo, w http.ResponseWriter, r *http.Request) {
+	if r.FormValue("confirmrevert") != "" {
+		aname := r.FormValue("revertoldfile")
+		filename := dir + "/archivefiles/" + aname
+		destfilename := getShelfDir() + aname
+		err := copyFile(filename, destfilename)
+		if err == nil {
+			os.Remove(filename)
+			http.Redirect(w, r, "/gocat", http.StatusTemporaryRedirect)
+		} else {
+			applicationInfo.Message = err.Error()
+			applicationInfo.Class = "errormessage"
+		}
+
+	}
+}
+
+func checkArchive(dir, appname string) (hasArchive bool, fileTime string) {
+
+	filename := dir + "/archivefiles/" + appname
+	hasArchive = codeutils.IsFileExists(filename)
+	if hasArchive {
+		fileInfo, err := os.Stat(filename)
+		if err == nil {
+			fileTime = fileInfo.ModTime().Format(time.DateTime)
+		}
+	}
+	return
+
+}
+
 func app(w http.ResponseWriter, r *http.Request) {
 
 	valid, login := checkSession(w, r)
@@ -395,7 +430,8 @@ func app(w http.ResponseWriter, r *http.Request) {
 		configFileName := dir + "/" + appname + ".json"
 		changePort(configFileName, r)
 		_, info := readAppConfig(configFileName)
-
+		applicationInfo.HasArchive, applicationInfo.ArchiveTime = checkArchive(dir, appname)
+		applicationInfo.RevertOld = r.FormValue("revert") != ""
 		applicationInfo.Port = info.Port
 
 		files := listFiles(dir, w)
@@ -409,6 +445,7 @@ func app(w http.ResponseWriter, r *http.Request) {
 		editFile(dir, &applicationInfo, w, r)
 		saveFile(dir, &applicationInfo, w, r)
 		showNewFile(dir, &applicationInfo, w, r)
+		revertToOld(dir, &applicationInfo, w, r)
 		if r.FormValue("remove") != "" {
 			applicationInfo.RemoveFile = true
 			applicationInfo.RemoveFileName = r.FormValue("editfile")
