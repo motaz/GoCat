@@ -313,11 +313,13 @@ func runShell(runOrStart int, command string, arguments ...string) (result strin
 	cmd := exec.Command(command, arguments...)
 	cmd.Stdout = &out
 	cmd.Stderr = &err
+
+	cmd.WaitDelay = time.Second * 10
 	if runOrStart == Run {
 		cmd.Run()
 	} else if runOrStart == Start {
+		cmd.Start()
 
-		cmd.Run()
 	}
 	result = out.String()
 	errorMsg = err.String()
