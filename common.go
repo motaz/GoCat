@@ -356,13 +356,11 @@ func copyFile(sourcename string, targetname string) error {
 			}
 		}
 		if err == nil {
-			target, err := os.Create(targetname)
+			target, err := os.OpenFile(targetname, os.O_CREATE|os.O_WRONLY, os.ModePerm)
 			if err == nil {
 				defer target.Close()
 				_, err = io.Copy(target, source)
-				if err == nil {
-					CopyFileInfo(sourcename, targetname)
-				}
+
 			}
 		}
 
@@ -485,6 +483,9 @@ func ArchiveOldFile(appname, targetFilename string) (err error) {
 		if index > 0 {
 			filename := targetFilename[index+1:]
 			err = copyFile(targetFilename, archivefolder+"/"+filename)
+			if err == nil {
+				CopyFileInfo(targetFilename, archivefolder+"/"+filename)
+			}
 		}
 
 	}

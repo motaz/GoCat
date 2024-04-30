@@ -373,11 +373,13 @@ func changePort(configFileName string, r *http.Request) {
 }
 
 func revertToOld(dir string, applicationInfo *ApplicationInfo, w http.ResponseWriter, r *http.Request) {
+
 	if r.FormValue("confirmrevert") != "" {
 		aname := r.FormValue("revertoldfile")
 		filename := dir + "/archivefiles/" + aname
 		destfilename := getShelfDir() + aname
 		err := copyFile(filename, destfilename)
+		CopyFileInfo(filename, destfilename)
 		if err == nil {
 			os.Remove(filename)
 			http.Redirect(w, r, "/gocat", http.StatusTemporaryRedirect)

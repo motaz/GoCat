@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/motaz/codeutils"
 )
@@ -120,6 +121,8 @@ func upload(w http.ResponseWriter, r *http.Request, indexTemplate *IndexTemplate
 			details.Port = port
 			details.AppName = aname
 			details.Counter = 0
+			details.StatusTime = time.Now()
+			details.LastStatus = "Upload"
 			err = writeConfigFile(details, infoFilename, *indexTemplate)
 
 		}
@@ -182,7 +185,7 @@ func copyAndPutFile(fullfilename string, indexTemplate *IndexTemplate,
 
 	os.Remove(fullfilename + ".tmp")
 
-	tempFile, err := os.OpenFile(fullfilename+".tmp", os.O_WRONLY|os.O_CREATE, 777)
+	tempFile, err := os.OpenFile(fullfilename+".tmp", os.O_WRONLY|os.O_CREATE, os.ModePerm)
 	if err != nil {
 		indexTemplate.Message = err.Error()
 		indexTemplate.Class = "errormessage"

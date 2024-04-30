@@ -118,6 +118,7 @@ func replaceApp(r *http.Request, indexTemplate *IndexTemplate) {
 	isAlreadyRunning := stopIfRunning(appname, false)
 	ArchiveOldFile(appname, destFile)
 	err := copyFile(sourceFile, destFile)
+	CopyFileInfo(sourceFile, destFile)
 	if err == nil {
 
 		indexTemplate.Message = "Application replaced: " + appname
