@@ -156,6 +156,7 @@ func login(w http.ResponseWriter, r *http.Request) {
 		var result OutputData
 		result.IsInvalid = false
 		result.Version = VERSION
+
 		if r.FormValue("submitlogin") != "" {
 			keep := r.FormValue("keeplogin") == "1"
 
@@ -166,6 +167,7 @@ func login(w http.ResponseWriter, r *http.Request) {
 					r.RemoteAddr)
 
 			} else {
+				w.WriteHeader(http.StatusUnauthorized)
 				result.ErrorMsg = "Invalid username/and or password"
 				result.IsInvalid = true
 				writeToLog("Invalid login for: " + r.FormValue("login") + ", from: " +
