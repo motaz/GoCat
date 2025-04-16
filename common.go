@@ -306,7 +306,6 @@ func Shell(command string) (result string, errorMsg string) {
 }
 
 func runShell(runOrStart int, command string, arguments ...string) (result string, errorMsg string) {
-
 	var out bytes.Buffer
 	var err bytes.Buffer
 
@@ -314,13 +313,17 @@ func runShell(runOrStart int, command string, arguments ...string) (result strin
 	cmd.Stdout = &out
 	cmd.Stderr = &err
 
-	cmd.WaitDelay = time.Second * 10
+	cmd.WaitDelay = time.Second * 10 // note: WaitDelay is only for Go 1.21+
+
 	if runOrStart == Run {
+		// Run calls Start + Wait internally
 		cmd.Run()
 	} else if runOrStart == Start {
 		cmd.Start()
-
+		// You must call Wait() to reap the process
+		cmd.Wait()
 	}
+
 	result = out.String()
 	errorMsg = err.String()
 	return
