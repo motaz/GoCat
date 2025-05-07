@@ -11,7 +11,7 @@ import (
 	"strings"
 )
 
-const VERSION = "1.1.0 r16-Apr"
+const VERSION = "1.1.1 r7-May"
 
 var mytemplate *template.Template
 

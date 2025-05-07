@@ -4,6 +4,7 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"crypto/md5"
 	"encoding/hex"
 	"encoding/json"
@@ -305,6 +306,7 @@ func Shell(command string) (result string, errorMsg string) {
 	return
 }
 
+/*
 func runShell(runOrStart int, command string, arguments ...string) (result string, errorMsg string) {
 	var out bytes.Buffer
 	var err bytes.Buffer
@@ -322,6 +324,55 @@ func runShell(runOrStart int, command string, arguments ...string) (result strin
 		cmd.Start()
 		// You must call Wait() to reap the process
 		cmd.Wait()
+	}
+
+	result = out.String()
+	errorMsg = err.String()
+	return
+}
+*/
+
+func runShell(runOrStart int, command string, arguments ...string) (result string, errorMsg string) {
+	var out bytes.Buffer
+	var err bytes.Buffer
+
+	cmd := exec.Command(command, arguments...)
+	cmd.Stdout = &out
+	cmd.Stderr = &err
+
+	cmd.WaitDelay = time.Second * 10 // note: WaitDelay is only for Go 1.21+
+
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	defer cancel()
+
+	cmd = exec.CommandContext(ctx, command, arguments...)
+	cmd.Stdout = &out
+	cmd.Stderr = &err
+
+	if runOrStart == Run {
+		err := cmd.Run()
+		if ctx.Err() == context.DeadlineExceeded {
+			errorMsg = "command timed out"
+			return out.String(), errorMsg
+		}
+		if err != nil {
+			errorMsg = err.Error()
+		}
+	} else if runOrStart == Start {
+		err := cmd.Start()
+		if err != nil {
+			errorMsg = err.Error()
+			return out.String(), errorMsg
+		}
+
+		err = cmd.Wait()
+		if ctx.Err() == context.DeadlineExceeded {
+			errorMsg = "command timed out"
+			return out.String(), errorMsg
+		}
+		if err != nil {
+			errorMsg = err.Error()
+		}
 	}
 
 	result = out.String()
