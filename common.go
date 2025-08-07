@@ -260,7 +260,7 @@ func isAppRunning(appname string) (isRunning bool, since string) {
 
 	var out bytes.Buffer
 
-	cmd := exec.Command("/bin/bash", "-c", "ps -ef | grep "+appname)
+	cmd := exec.Command("/bin/bash", "-c", "ps -ef | grep "+appname+"$")
 	cmd.Stdout = &out
 	cmd.Run()
 

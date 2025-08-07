@@ -11,7 +11,7 @@ import (
 	"strings"
 )
 
-const VERSION = "1.1.1 r7-May"
+const VERSION = "1.1.2 r8-July"
 
 var mytemplate *template.Template
 
@@ -36,8 +36,8 @@ func main() {
 	fmt.Println("OS,Arch: ", runtime.GOOS, runtime.GOARCH)
 	fmt.Println("No of CPUs: ", runtime.NumCPU())
 
-	checkClosedApps("GoCat start")
-	go check()
+	go checkClosedApps("GoCat start")
+
 	err := InitTemplate(templates)
 	if err == nil {
 		http.Handle("/gocat/static/", http.StripPrefix("/gocat/", http.FileServer(http.FS(static))))
