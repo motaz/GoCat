@@ -101,6 +101,8 @@ func index(w http.ResponseWriter, r *http.Request) {
 		}
 		indexTemplate.Apps = list
 		indexTemplate.ShelfApps = shelfList
+		indexTemplate.HostOS, _ = getOSDescription()
+		indexTemplate.Uptime = getUptime()
 
 		err := mytemplate.ExecuteTemplate(w, "index.html", indexTemplate)
 		if err != nil {

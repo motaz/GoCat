@@ -22,6 +22,8 @@ type HeaderValues struct {
 	Login     string
 	Linuxuser string
 	Hostname  string
+	HostOS    string
+	Uptime    string
 }
 
 type IndexTemplate struct {

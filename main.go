@@ -11,7 +11,7 @@ import (
 	"strings"
 )
 
-const VERSION = "1.1.2 r8-July"
+const VERSION = "1.1.5 r10-Nov"
 
 var mytemplate *template.Template
 
@@ -72,6 +72,7 @@ func main() {
 }
 
 func SetCacheHeader(h http.Handler) http.Handler {
+
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Add("X-Frame-Options", "SAMEORIGIN")
 

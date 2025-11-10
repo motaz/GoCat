@@ -306,32 +306,6 @@ func Shell(command string) (result string, errorMsg string) {
 	return
 }
 
-/*
-func runShell(runOrStart int, command string, arguments ...string) (result string, errorMsg string) {
-	var out bytes.Buffer
-	var err bytes.Buffer
-
-	cmd := exec.Command(command, arguments...)
-	cmd.Stdout = &out
-	cmd.Stderr = &err
-
-	cmd.WaitDelay = time.Second * 10 // note: WaitDelay is only for Go 1.21+
-
-	if runOrStart == Run {
-		// Run calls Start + Wait internally
-		cmd.Run()
-	} else if runOrStart == Start {
-		cmd.Start()
-		// You must call Wait() to reap the process
-		cmd.Wait()
-	}
-
-	result = out.String()
-	errorMsg = err.String()
-	return
-}
-*/
-
 func runShell(runOrStart int, command string, arguments ...string) (result string, errorMsg string) {
 	var out bytes.Buffer
 	var err bytes.Buffer
@@ -550,4 +524,38 @@ func getShelfDir() (shelfDir string) {
 
 	shelfDir = getAppDir() + "shelf.dir/"
 	return
+}
+
+func getOSDescription() (string, error) {
+
+	cmd := exec.Command("hostnamectl")
+	outputBytes, err := cmd.Output()
+	if err != nil {
+		return "", fmt.Errorf("failed to execute lsb_release: %w", err)
+	}
+	output := string(outputBytes)
+
+	lines := strings.Split(output, "\n")
+	prefix := "Operating System:"
+	for _, line := range lines {
+		line := strings.TrimSpace(line)
+		if strings.HasPrefix(line, prefix) {
+
+			description := strings.TrimSpace(strings.TrimPrefix(line, prefix))
+			return description, nil
+		}
+	}
+
+	return "", fmt.Errorf("description field not found in lsb_release output:\n%s", output)
+}
+
+func getUptime() string {
+
+	cmd := exec.Command("uptime")
+	outputBytes, err := cmd.Output()
+	if err != nil {
+		return ""
+	}
+	return string(outputBytes)
+
 }
