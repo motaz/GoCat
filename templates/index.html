@@ -55,10 +55,10 @@
 		
 		  <td>
 		  {{if .IsRunning}}
-		  <input type=submit name=stop value="Stop" class = "redbutton" />
+		  <input type=submit name=stop value="Stop" class = "redbutton" onclick="return confirm('Are you sure you want to stop application {{.Filename}}?')" />
 		  {{end}}
-		
-		
+
+
   		</td>
  		</form>
 		</tr>

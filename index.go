@@ -181,8 +181,6 @@ func getInfoFilename(appname string) (infoFilename string) {
 
 func startAndstopApp(actionType StartStopType, r *http.Request, indexTemplate *IndexTemplate) {
 
-	CloseMutex.Lock()
-	defer CloseMutex.Unlock()
 	appname := r.FormValue("appname")
 	var label string
 	if actionType == START {
@@ -206,6 +204,7 @@ func startAndstopApp(actionType StartStopType, r *http.Request, indexTemplate *I
 		if actionType == START {
 			details.IsRunning = true
 			details.LastStatus = "manual start"
+
 			errorMsg := runApp(appname)
 			if errorMsg != "" {
 				indexTemplate.Message = "Error: " + errorMsg

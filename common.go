@@ -34,7 +34,7 @@ type FileInfo struct {
 
 func writeToFile(filename string, contents []byte) error {
 
-	err := ioutil.WriteFile(filename, contents, 0644)
+	err := os.WriteFile(filename, contents, 0644)
 	return err
 
 }
