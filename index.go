@@ -46,6 +46,9 @@ func getVersion(p []byte, o OutGetterType) {
 var AppVersions = map[string]string{}
 
 func index(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodPost && !validateCSRF(w, r) {
+		return
+	}
 
 	w.Header().Add("X-Frame-Options", "SAMEORIGIN")
 
@@ -53,6 +56,7 @@ func index(w http.ResponseWriter, r *http.Request) {
 	if valid {
 		var indexTemplate IndexTemplate
 
+		indexTemplate.CSRF = setCSRFCookie(w, r)
 		indexTemplate.Hostname, _ = os.Hostname()
 		indexTemplate.Login = login
 		indexTemplate.Version = VERSION

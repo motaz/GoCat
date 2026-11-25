@@ -2,6 +2,9 @@ package main
 
 import (
 	"bufio"
+	"crypto/rand"
+	"crypto/subtle"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -24,6 +27,7 @@ type HeaderValues struct {
 	Hostname  string
 	HostOS    string
 	Uptime    string
+	CSRF      string
 }
 
 type IndexTemplate struct {
@@ -145,9 +149,13 @@ type OutputData struct {
 	ErrorMsg  string
 	Login     string
 	Version   string
+	CSRF      string
 }
 
 func login(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodPost && !validateCSRF(w, r) {
+		return
+	}
 
 	user := getConfigValue("user", "")
 	if user == "" {
@@ -156,6 +164,7 @@ func login(w http.ResponseWriter, r *http.Request) {
 	} else {
 		w.Header().Add("X-Frame-Options", "SAMEORIGIN")
 		var result OutputData
+		result.CSRF = setCSRFCookie(w, r)
 		result.IsInvalid = false
 		result.Version = VERSION
 
@@ -184,22 +193,31 @@ func login(w http.ResponseWriter, r *http.Request) {
 }
 
 func setup(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodPost && !validateCSRF(w, r) {
+		return
+	}
 
 	if codeutils.IsFileExists("gocat.ini") {
 		http.Redirect(w, r, "/gocat/login", http.StatusTemporaryRedirect)
 
 	} else {
 		var result OutputData
+		result.CSRF = setCSRFCookie(w, r)
 		result.IsInvalid = false
 		if r.FormValue("setup") != "" {
 			if (r.FormValue("password") == "") ||
 				(r.FormValue("confirmpassword") != r.FormValue("password")) {
 
 			} else {
-				codeutils.SetConfigValue("gocat.ini", "user", r.FormValue("login"))
-				passwordhash := GetMD5Hash(r.FormValue("password"))
-				codeutils.SetConfigValue("gocat.ini", "password", passwordhash)
-				http.Redirect(w, r, "/gocat/login", http.StatusTemporaryRedirect)
+				username := strings.ToLower(r.FormValue("login"))
+				if err := setUser(username, r.FormValue("password"), true); err == nil {
+					codeutils.SetConfigValue("gocat.ini", "user", username)
+					codeutils.SetConfigValue("gocat.ini", "password", "-")
+					http.Redirect(w, r, "/gocat/login", http.StatusTemporaryRedirect)
+				} else {
+					result.IsInvalid = true
+					result.ErrorMsg = "Unable to save administrator credentials"
+				}
 
 			}
 		}
@@ -208,6 +226,40 @@ func setup(w http.ResponseWriter, r *http.Request) {
 			w.Write([]byte("Error: " + err.Error()))
 		}
 	}
+}
+
+func newCSRFToken() (string, error) {
+	value := make([]byte, 32)
+	if _, err := rand.Read(value); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(value), nil
+}
+
+func setCSRFCookie(w http.ResponseWriter, r *http.Request) string {
+	token, err := newCSRFToken()
+	if err != nil {
+		return ""
+	}
+	cookie := http.Cookie{Name: "gocatcsrf", Value: token, Path: "/", HttpOnly: true, Secure: r.TLS != nil, SameSite: http.SameSiteStrictMode}
+	http.SetCookie(w, &cookie)
+	return token
+}
+
+func validateCSRF(w http.ResponseWriter, r *http.Request) bool {
+	if r.Method != http.MethodPost {
+		return true
+	}
+	cookie, err := r.Cookie("gocatcsrf")
+	if err != nil {
+		http.Error(w, "Missing CSRF token", http.StatusForbidden)
+		return false
+	}
+	if subtle.ConstantTimeCompare([]byte(cookie.Value), []byte(r.FormValue("csrf"))) != 1 {
+		http.Error(w, "Invalid CSRF token", http.StatusForbidden)
+		return false
+	}
+	return true
 }
 
 func setLoginCookies(w http.ResponseWriter, r *http.Request, keepSession bool) {
@@ -221,10 +273,15 @@ func setLoginCookies(w http.ResponseWriter, r *http.Request, keepSession bool) {
 		expiration = time.Now().Add(time.Hour * 8)
 
 	}
-	sessionValue := GetMD5Hash(r.UserAgent() + time.Now().String())
+	randomValue := make([]byte, 32)
+	if _, err := rand.Read(randomValue); err != nil {
+		http.Error(w, "Unable to create secure session", http.StatusInternalServerError)
+		return
+	}
+	sessionValue := hex.EncodeToString(randomValue)
 
 	saveSession(r, sessionValue, keepSession)
-	cookie := http.Cookie{Name: "gocatsession", Value: sessionValue, Expires: expiration}
+	cookie := http.Cookie{Name: "gocatsession", Value: sessionValue, Path: "/", Expires: expiration, HttpOnly: true, Secure: r.TLS != nil, SameSite: http.SameSiteStrictMode}
 	http.SetCookie(w, &cookie)
 }
 
@@ -251,9 +308,8 @@ func checkLogin(username string, userpassword string) (success bool) {
 			}
 		}
 	} else {
-		found, hashpassword, isAdmin := getUserCredentials(username)
-		success = found && hashpassword == getPasswordHash(username,
-			userpassword, isAdmin)
+		found, _, isAdmin := getUserCredentials(username)
+		success = found && verifyPassword(username, userpassword, isAdmin)
 	}
 
 	return
@@ -290,8 +346,13 @@ type ApplicationInfo struct {
 func removeFile(dir string, w http.ResponseWriter, r *http.Request) {
 
 	if r.FormValue("confirmremove") != "" {
+		filename, err := secureJoin(dir, r.FormValue("removefilename"))
+		if err != nil {
+			http.Error(w, "Invalid filename", http.StatusBadRequest)
+			return
+		}
 		writeToLog("Removing file: " + r.FormValue("removefilename"))
-		err := os.Remove(dir + "/" + r.FormValue("removefilename"))
+		err = os.Remove(filename)
 		if err != nil {
 			fmt.Fprintf(w, "<p id=errormessage>%s</p>", err.Error())
 		} else {
@@ -303,8 +364,18 @@ func removeFile(dir string, w http.ResponseWriter, r *http.Request) {
 func renameFile(dir string, w http.ResponseWriter, r *http.Request) {
 
 	if r.FormValue("dorename") != "" {
+		source, err := secureJoin(dir, r.FormValue("renamefilename"))
+		if err != nil {
+			http.Error(w, "Invalid filename", http.StatusBadRequest)
+			return
+		}
+		destination, err := secureJoin(dir, r.FormValue("newfilename"))
+		if err != nil {
+			http.Error(w, "Invalid filename", http.StatusBadRequest)
+			return
+		}
 		writeToLog("Renaming file: " + r.FormValue("renamefilename"))
-		err := os.Rename(dir+"/"+r.FormValue("renamefilename"), dir+"/"+r.FormValue("newfilename"))
+		err = os.Rename(source, destination)
 		if err != nil {
 			fmt.Fprintf(w, "<p id=errormessage>%s</p>", err.Error())
 		} else {
@@ -331,8 +402,13 @@ func saveFile(dir string, applicationInfo *ApplicationInfo, w http.ResponseWrite
 
 func actualSaveFile(filename, dir, contents string, w http.ResponseWriter) (err error) {
 
+	target, err := secureJoin(dir, filename)
+	if err != nil {
+		http.Error(w, "Invalid filename", http.StatusBadRequest)
+		return err
+	}
 	writeToLog("Saving file: " + filename)
-	err = WriteToFile(dir+"/"+filename, contents)
+	err = WriteToFile(target, contents)
 	if err != nil {
 		fmt.Fprintf(w, "<p id=errormessage>%s</p>", err.Error())
 	} else {
@@ -345,9 +421,14 @@ func actualSaveFile(filename, dir, contents string, w http.ResponseWriter) (err 
 func editFile(dir string, applicationInfo *ApplicationInfo, w http.ResponseWriter, r *http.Request) {
 
 	if r.FormValue("edit") != "" {
+		filename, err := secureJoin(dir, r.FormValue("editfile"))
+		if err != nil {
+			http.Error(w, "Invalid filename", http.StatusBadRequest)
+			return
+		}
 		applicationInfo.Editing = true
 		applicationInfo.EditFileName = r.FormValue("editfile")
-		content, err := ioutil.ReadFile(dir + "/" + applicationInfo.EditFileName)
+		content, err := ioutil.ReadFile(filename)
 		if err != nil {
 			writeToLog("Error in editFile: " + err.Error())
 		}
@@ -380,9 +461,17 @@ func revertToOld(dir string, applicationInfo *ApplicationInfo, w http.ResponseWr
 
 	if r.FormValue("confirmrevert") != "" {
 		aname := r.FormValue("revertoldfile")
-		filename := dir + "/archivefiles/" + aname
-		destfilename := getShelfDir() + aname
-		err := copyFile(filename, destfilename)
+		filename, err := secureJoin(dir+"/archivefiles", aname)
+		if err != nil {
+			http.Error(w, "Invalid filename", http.StatusBadRequest)
+			return
+		}
+		destfilename, err := secureJoin(getShelfDir(), aname)
+		if err != nil {
+			http.Error(w, "Invalid filename", http.StatusBadRequest)
+			return
+		}
+		err = copyFile(filename, destfilename)
 		CopyFileInfo(filename, destfilename)
 		if err == nil {
 			os.Remove(filename)
@@ -410,10 +499,14 @@ func checkArchive(dir, appname string) (hasArchive bool, fileTime string) {
 }
 
 func app(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodPost && !validateCSRF(w, r) {
+		return
+	}
 
 	valid, login := checkSession(w, r)
 	if valid {
 		var applicationInfo ApplicationInfo
+		applicationInfo.CSRF = setCSRFCookie(w, r)
 		applicationInfo.Login = login
 		applicationInfo.Hostname, _ = os.Hostname()
 		applicationInfo.HasUpload = false
@@ -428,7 +521,15 @@ func app(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		appname := r.FormValue("appname")
-		dir := getAppDir() + appname
+		if !validAppName(appname) {
+			http.Error(w, "Invalid application name", http.StatusBadRequest)
+			return
+		}
+		dir, err := secureJoin(getAppDir(), appname)
+		if err != nil {
+			http.Error(w, "Invalid application name", http.StatusBadRequest)
+			return
+		}
 		removeFile(dir, w, r)
 		renameFile(dir, w, r)
 		saveNewFile(dir, &applicationInfo, w, r)
@@ -462,7 +563,7 @@ func app(w http.ResponseWriter, r *http.Request) {
 			applicationInfo.RenameFileName = r.FormValue("renamefile")
 		}
 
-		err := mytemplate.ExecuteTemplate(w, "application.html", applicationInfo)
+		err = mytemplate.ExecuteTemplate(w, "application.html", applicationInfo)
 		if err != nil {
 			w.Write([]byte("Error: " + err.Error()))
 		}
@@ -488,8 +589,11 @@ func WriteToFile(filename string, data string) error {
 func download(w http.ResponseWriter, r *http.Request) {
 	valid, _ := checkSession(w, r)
 	if valid {
-		filename := r.FormValue("filename")
-		filename = getAppDir() + filename
+		filename, err := secureJoin(getAppDir(), r.FormValue("filename"))
+		if err != nil {
+			http.Error(w, "Invalid filename", http.StatusBadRequest)
+			return
+		}
 
 		file, e := os.Open(filename)
 		if e != nil {
@@ -524,7 +628,7 @@ func logout(w http.ResponseWriter, r *http.Request) {
 	if err == nil {
 		removeSession(sessionCookie.Value)
 		expiration := time.Now()
-		cookie := http.Cookie{Name: "gocatsession", Value: "-", Expires: expiration}
+		cookie := http.Cookie{Name: "gocatsession", Value: "-", Path: "/", Expires: expiration, HttpOnly: true, Secure: r.TLS != nil, SameSite: http.SameSiteStrictMode}
 		http.SetCookie(w, &cookie)
 	}
 
@@ -539,10 +643,14 @@ type ChangePassType struct {
 }
 
 func changePass(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodPost && !validateCSRF(w, r) {
+		return
+	}
 
 	valid, login := checkSession(w, r)
 	if valid {
 		var result ChangePassType
+		result.CSRF = setCSRFCookie(w, r)
 		result.Login = login
 		result.IsValid = true
 		currentpassword := r.FormValue("password")

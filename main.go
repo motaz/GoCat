@@ -11,7 +11,7 @@ import (
 	"strings"
 )
 
-const VERSION = "1.1.6 r28-Jan"
+const VERSION = "1.2.0 r25-Nov"
 
 var mytemplate *template.Template
 
@@ -59,7 +59,6 @@ func main() {
 			port = ":" + port
 		}
 		fmt.Println("http://localhost" + port)
-
 		err = http.ListenAndServe(port, nil)
 		if err != nil {
 			writeToLog("Error: " + err.Error())

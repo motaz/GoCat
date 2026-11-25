@@ -15,8 +15,10 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/motaz/codeutils"
@@ -256,36 +258,83 @@ func readAppConfig(jsonfilename string) (success bool, info DetailFile) {
 
 }
 
-func isAppRunning(appname string) (isRunning bool, since string) {
+func secureJoin(baseDir, untrusted string) (string, error) {
+	base, err := filepath.Abs(baseDir)
+	if err != nil {
+		return "", err
+	}
+	candidate, err := filepath.Abs(filepath.Join(base, untrusted))
+	if err != nil {
+		return "", err
+	}
+	rel, err := filepath.Rel(base, candidate)
+	if err != nil {
+		return "", err
+	}
+	if rel == ".." || strings.HasPrefix(rel, ".."+string(os.PathSeparator)) {
+		return "", fmt.Errorf("path escapes allowed directory")
+	}
+	return candidate, nil
+}
 
-	var out bytes.Buffer
-
-	cmd := exec.Command("/bin/bash", "-c", "ps -ef | grep "+appname+"$")
-	cmd.Stdout = &out
-	cmd.Run()
-
-	isRunning = false
-	lines := strings.Split(out.String(), "\n")
-
-	for i := 0; i < len(lines); i++ {
-		if (strings.Contains(lines[i], appname)) && (!strings.Contains(lines[i], "grep")) {
-			since = lines[i]
-			for j := 0; j < 4; j++ {
-				if strings.Contains(since, " ") {
-
-					since = strings.Trim(since[strings.Index(since, " "):], " ")
-				}
-
-			}
-			if strings.Contains(since, " ") {
-				since = since[:strings.Index(since, " ")]
-			}
-
-			isRunning = true
+func validAppName(appname string) bool {
+	if appname == "" || len(appname) > 128 {
+		return false
+	}
+	for _, r := range appname {
+		if (r < 'a' || r > 'z') && (r < 'A' || r > 'Z') &&
+			(r < '0' || r > '9') && r != '-' && r != '_' && r != '.' {
+			return false
 		}
 	}
+	return appname != "." && appname != ".."
+}
 
-	return
+func appProcessIDs(appname string) ([]int, string) {
+	var pids []int
+	var since string
+	if !validAppName(appname) {
+		return pids, since
+	}
+
+	entries, err := os.ReadDir("/proc")
+	if err != nil {
+		return pids, since
+	}
+	for _, entry := range entries {
+		pid, err := strconv.Atoi(entry.Name())
+		if err != nil {
+			continue
+		}
+		cmdline, err := os.ReadFile("/proc/" + entry.Name() + "/cmdline")
+		if err != nil {
+			continue
+		}
+		parts := strings.Split(string(cmdline), "\x00")
+		matched := false
+		for _, part := range parts {
+			if part != "" && filepath.Base(part) == appname {
+				matched = true
+				break
+			}
+		}
+		if matched {
+			pids = append(pids, pid)
+			stat, err := os.ReadFile("/proc/" + entry.Name() + "/stat")
+			if err == nil {
+				fields := strings.Fields(string(stat))
+				if len(fields) > 21 {
+					since = fields[21]
+				}
+			}
+		}
+	}
+	return pids, since
+}
+
+func isAppRunning(appname string) (isRunning bool, since string) {
+	pids, since := appProcessIDs(appname)
+	return len(pids) > 0, since
 }
 
 const (
@@ -294,9 +343,16 @@ const (
 )
 
 func executeKill(appname string) (result string, errorMsg string) {
-
-	result, errorMsg = runShell(Run, "/bin/sh", "-c", "killall "+appname)
-	return
+	pids, _ := appProcessIDs(appname)
+	if len(pids) == 0 {
+		return "", ""
+	}
+	for _, pid := range pids {
+		if err := syscall.Kill(pid, syscall.SIGTERM); err != nil {
+			return "", err.Error()
+		}
+	}
+	return strconv.Itoa(len(pids)) + " process(es) stopped", ""
 }
 
 func Shell(command string) (result string, errorMsg string) {
@@ -397,6 +453,9 @@ func copyFile(sourcename string, targetname string) error {
 }
 
 func runApp(appname string) (errorMsg string) {
+	if !validAppName(appname) {
+		return "invalid application name"
+	}
 
 	filename := getAppDir() + appname + "/start.sh"
 	reWriteFile(filename, appname)

@@ -1,6 +1,7 @@
 
 
 {{ template "header" . }}
+{{$csrf := .CSRF}}
 
   <div id="page_content">
 
@@ -36,6 +37,7 @@
 {{if .NewFile}}
   <br/>
   <form method=post action="/gocat/app?appname={{.AppName}}">
+	<input type=hidden name=csrf value="{{$csrf}}" />
      <b>New filename </b><input type=text name=newfilename autofocus > <br/>
      <textarea name=content rows=15 cols=60>{{.Content}}</textarea>
      <br/>
@@ -49,6 +51,7 @@
   <br/>
   Editing <b>{{.EditFileName}}</b>
   <form method=post action="/gocat/app?appname={{.AppName}}">
+	<input type=hidden name=csrf value="{{$csrf}}" />
      <input type=hidden name=editfile value="{{.EditFileName}}" > 
      <textarea name=content rows=15 cols=60>{{.Content}}</textarea>
      <br/>
@@ -59,7 +62,8 @@
 {{end}}
 
 {{if .RemoveFile}}
-		<form method=post action='/gocat/app?appname={{.AppName}}'>"
+		<form method=post action='/gocat/app?appname={{.AppName}}'>
+	<input type=hidden name=csrf value="{{$csrf}}" />"
 		    Remove <b>{{.RemoveFileName}}</b>
         <input type=hidden name=removefilename value="{{.RemoveFileName}}" >
 
@@ -70,6 +74,7 @@
 
 {{if .RenameFile}}
 		<form method=post action='/gocat/app?appname={{.AppName}}'>
+	<input type=hidden name=csrf value="{{$csrf}}" />
 		    Rename
         <input type=hidden name=renamefilename value="{{.RenameFileName}}" >
         <input type=text name=newfilename value="{{.RenameFileName}}" >
@@ -80,7 +85,8 @@
 {{end}}
 
 {{if  .RevertOld}}
-		<form method=post >"
+		<form method=post >
+	<input type=hidden name=csrf value="{{$csrf}}" />"
 		    Revert old <b>{{.AppName}}</b> ?
         <input type=hidden name=revertoldfile value="{{.AppName}}" >
 
@@ -104,6 +110,7 @@
     <td>
     {{ if .IsEdit}}
     <form method=POST action="/gocat/app?appname={{$name}}">
+	<input type=hidden name=csrf value="{{$csrf}}" />
     <input type=hidden name=editfile value="{{.FileName}}" >
     <input type=submit name=edit value=Edit class='bluebutton' />
     </form>
@@ -113,12 +120,14 @@
 		  <td align = right>{{.Size}}</td>
       <td>   
     <form method=POST action="/gocat/app?appname={{$name}}">
+	<input type=hidden name=csrf value="{{$csrf}}" />
       <input type=hidden name=editfile value="{{.FileName}}" >
       <input type=submit name=remove value=Remove class="redbutton" />
     </form>
     </td>
     <td>   
     <form method=POST action="/gocat/app?appname={{$name}}">
+	<input type=hidden name=csrf value="{{$csrf}}" />
       <input type=hidden name=renamefile value="{{.FileName}}" >
       <input type=submit name=rename value=Rename class="bluebutton" />
     </form>
@@ -129,6 +138,7 @@
     <p>
 		<hr>
     <form method=POST action="/gocat/app?appname={{$name}}">
+	<input type=hidden name=csrf value="{{$csrf}}" />
         <input type=submit name=newfile value='New File' class='button' />
         
         <Br/>
@@ -140,6 +150,7 @@
 
 {{ if .HasArchive}}
   <form method=POST>
+	<input type=hidden name=csrf value="{{$csrf}}" />
     <p id="warnmessage">There is a Prevoius app version of 
     <font color=blue>{{.AppName}}</font>,
      date: {{.ArchiveTime}} </p>
@@ -150,6 +161,7 @@
   <hr>
 {{end}}
 		<form method=POST  enctype="multipart/form-data">
+	<input type=hidden name=csrf value="{{$csrf}}" />
 		<h3>Upload file(s)</h3>
 		<input type=file name="file" multiple >
 		<input type=hidden name=dir value="{{.Dir}}" />
@@ -164,6 +176,7 @@
 
 		<h3>Upload Folder</h3>
 		<form method=POST  enctype="multipart/form-data">
+	<input type=hidden name=csrf value="{{$csrf}}" />
 		<input type=file name="file" webkitdirectory mozdirectory multiple >
 		<input type=hidden name=dir value="{{.Dir}}" />
 		<input type=hidden name=appname value="{{.AppName}}" />

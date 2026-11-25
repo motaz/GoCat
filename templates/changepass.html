@@ -1,4 +1,5 @@
 {{ template "header" . }}
+{{$csrf := .CSRF}}
 
   <div id="page_content">
 
@@ -14,6 +15,7 @@
 	  	<p id=errormessage>{{.ErrorMsg}}</p>
 		{{end}}
 		<form method=POST>
+	<input type=hidden name=csrf value="{{$csrf}}" />
 		<table style='border-collapse: collapse; border: none;' >
 	
 		  <tr>

@@ -1,7 +1,10 @@
 package main
 
 import (
+	"archive/zip"
+	"compress/gzip"
 	"encoding/json"
+	"fmt"
 	"io"
 	"mime/multipart"
 	"net/http"
@@ -30,15 +33,26 @@ func uploadfiles(w http.ResponseWriter, r *http.Request) []UploadedFileInfo {
 	var result []UploadedFileInfo
 
 	dir := r.FormValue("dir")
+	validatedDir, err := secureJoin(getAppDir(), dir)
+	if err != nil {
+		return result
+	}
+	dir = validatedDir
 
 	r.ParseMultipartForm(32 << 20)
 	files := r.MultipartForm.File["file"]
 	for _, onefile := range files {
 		file, _ := onefile.Open()
 
-		filename := getFileName(onefile.Header["Content-Disposition"][0])
+		filename := filepath.Base(onefile.Filename)
+		if filename == "" || filename == "." || filename == ".." {
+			continue
+		}
 
-		afilename := dir + "/" + filename
+		afilename, err := secureJoin(dir, filename)
+		if err != nil {
+			continue
+		}
 		if strings.Contains(afilename, "/") {
 			folder := afilename[0:strings.LastIndex(afilename, "/")]
 			if !codeutils.IsFileExists(folder) {
@@ -50,7 +64,7 @@ func uploadfiles(w http.ResponseWriter, r *http.Request) []UploadedFileInfo {
 		f, _ := os.OpenFile(afilename, os.O_WRONLY|os.O_CREATE, 0766)
 
 		defer f.Close()
-		_, err := io.Copy(f, file)
+		_, err = io.Copy(f, file)
 		var uploadedFile UploadedFileInfo
 		uploadedFile.Filename = filename
 		writeToLog("Uploading: " + afilename)
@@ -78,26 +92,31 @@ func upload(w http.ResponseWriter, r *http.Request, indexTemplate *IndexTemplate
 	toShelf := r.FormValue("shelf") == "1"
 	r.ParseMultipartForm(32 << 20)
 	file, handler, err := r.FormFile("file")
-	isAlreadyRunning := stopIfRunning(handler.Filename, toShelf)
-	defer file.Close()
 	if err != nil {
 		indexTemplate.Message = "Error: " + err.Error()
 		indexTemplate.Class = "errormessage"
 
 	} else {
-		aname := handler.Filename
+		defer file.Close()
+		aname := filepath.Base(handler.Filename)
 		writeToLog(aname)
 		ex := filepath.Ext(aname)
 		if ex == ".gz" || ex == ".zip" {
 			aname = aname[:strings.Index(aname, ex)]
 		}
+		if !validAppName(aname) {
+			indexTemplate.Message = "Error: invalid application name"
+			indexTemplate.Class = "errormessage"
+			return
+		}
+		isAlreadyRunning := stopIfRunning(aname, toShelf)
 		// Put file in location
 		var dir, adir string
 		if toShelf {
 			dir = getShelfDir()
 			adir = dir
 		} else {
-			dir = getAppDir() + handler.Filename + "/"
+			dir = getAppDir() + aname + "/"
 			adir = getAppDir() + aname + "/"
 		}
 
@@ -129,6 +148,11 @@ func upload(w http.ResponseWriter, r *http.Request, indexTemplate *IndexTemplate
 
 		if err == nil {
 			if !toShelf {
+				if !validAppName(aname) {
+					indexTemplate.Message = "Error: invalid application name"
+					indexTemplate.Class = "errormessage"
+					return
+				}
 
 				err = writeStartScript(adir, aname)
 				ArchiveOldFile(aname, afilename)
@@ -145,6 +169,85 @@ func upload(w http.ResponseWriter, r *http.Request, indexTemplate *IndexTemplate
 		}
 
 	}
+}
+
+func gunzipFile(filename string) error {
+	input, err := os.Open(filename)
+	if err != nil {
+		return err
+	}
+	defer input.Close()
+
+	reader, err := gzip.NewReader(input)
+	if err != nil {
+		return err
+	}
+	defer reader.Close()
+
+	destination := strings.TrimSuffix(filename, ".gz")
+	output, err := os.OpenFile(destination, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0755)
+	if err != nil {
+		return err
+	}
+	defer output.Close()
+
+	_, err = io.Copy(output, reader)
+	if err == nil {
+		err = os.Remove(filename)
+	}
+	return err
+}
+
+func unzipFile(filename, destinationDir string) error {
+	reader, err := zip.OpenReader(filename)
+	if err != nil {
+		return err
+	}
+	defer reader.Close()
+
+	destinationRoot, err := filepath.Abs(destinationDir)
+	if err != nil {
+		return err
+	}
+	for _, entry := range reader.File {
+		target, err := filepath.Abs(filepath.Join(destinationRoot, entry.Name))
+		if err != nil {
+			return err
+		}
+		rel, err := filepath.Rel(destinationRoot, target)
+		if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(os.PathSeparator)) {
+			return fmt.Errorf("zip entry escapes destination: %s", entry.Name)
+		}
+
+		if entry.FileInfo().IsDir() {
+			if err := os.MkdirAll(target, 0755); err != nil {
+				return err
+			}
+			continue
+		}
+		if err := os.MkdirAll(filepath.Dir(target), 0755); err != nil {
+			return err
+		}
+		input, err := entry.Open()
+		if err != nil {
+			return err
+		}
+		output, err := os.OpenFile(target, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, entry.Mode())
+		if err != nil {
+			input.Close()
+			return err
+		}
+		_, copyErr := io.Copy(output, input)
+		input.Close()
+		closeErr := output.Close()
+		if copyErr != nil {
+			return copyErr
+		}
+		if closeErr != nil {
+			return closeErr
+		}
+	}
+	return os.Remove(filename)
 }
 
 func writeStartScript(dir string, filename string) error {
@@ -205,27 +308,32 @@ func copyAndPutFile(fullfilename string, indexTemplate *IndexTemplate,
 				ex := filepath.Ext(fullfilename)
 
 				if ex == ".gz" || ex == ".zip" {
-					var command string
 					if ex == ".gz" {
-						command = "gunzip -f "
+						err := os.Remove(fullfilename[:strings.Index(fullfilename, ex)])
+						if err != nil && !strings.Contains(err.Error(), "no such file or directory") {
+							writeToLog("Error remove old to uncompress: " + err.Error())
+						}
+						runErr := gunzipFile(fullfilename)
+						if runErr != nil {
+							indexTemplate.Message = "Error: " + runErr.Error()
+							indexTemplate.Class = "errormessage"
+						}
 					} else if ex == ".zip" {
-						command = "unzip -o -d " + filepath.Dir(fullfilename)
+						err := os.Remove(fullfilename[:strings.Index(fullfilename, ex)])
+						if err != nil && !strings.Contains(err.Error(), "no such file or directory") {
+							writeToLog("Error remove old to uncompress: " + err.Error())
+						}
+						runErr := unzipFile(fullfilename, filepath.Dir(fullfilename))
+						if runErr != nil {
+							indexTemplate.Message = "Error: " + runErr.Error()
+							indexTemplate.Class = "errormessage"
+						}
 					}
-					err := os.Remove(fullfilename[:strings.Index(fullfilename, ex)])
-					if err != nil && !strings.Contains(err.Error(), "no such file or directory") {
-						writeToLog("Error remove old to uncompress: " + err.Error())
-					}
-					_, errstr := runShell(Run, "/bin/sh", "-c", command+" "+fullfilename)
-					if errstr == "" && ex == ".zip" {
+					if ex == ".zip" && indexTemplate.Class != "errormessage" {
 
 						os.Remove(fullfilename)
 					}
 
-					if errstr != "" {
-						indexTemplate.Message = "Error: " + errstr
-						indexTemplate.Class = "errormessage"
-						writeToLog("Error while uncompress: " + errstr)
-					}
 				}
 				if indexTemplate.Class != "errormessage" {
 					if toShelf {

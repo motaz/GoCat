@@ -1,5 +1,6 @@
 
 {{ template "header" . }}
+{{$csrf := .CSRF}}
 
    <div id="page_content">
 
@@ -26,6 +27,7 @@
 		{{range .Apps}}
 		  <tr id={{.Class}}>
 		  <form method=POST>
+	<input type=hidden name=csrf value="{{$csrf}}" />
 		  <input type=hidden name=appname value={{.Filename}} />
 		  <td><a href="/gocat/app?appname={{.Filename}}"> {{.Filename}}</a></td> 
 		  <td><a href="{{.Address}}" target="_blank">{{.Port}}</td> 
@@ -71,11 +73,13 @@
 		<tr><td>{{.FileName}}<br/>
 		    <td style="white-space: nobr;">
 			<form method=POST name=aform style="display: inline-block;">
+	<input type=hidden name=csrf value="{{$csrf}}" />
 			<input type=hidden name=appname value="{{.FileName}}" />
       <font color=navy>{{.FileTime}}</font> {{.FileSize}}
 			<input type=submit name=action value="replace" class="bluebutton" />
       </form>
       <form name=remove method=POST style="display: inline-block;">
+	<input type=hidden name=csrf value="{{$csrf}}" />
 			<input type=hidden name=appname value="{{.FileName}}" />
 			<input type=hidden name=remove value="remove" />
       <input type="submit" class="redbutton" value="remove">
@@ -88,6 +92,7 @@
     
     {{ if ne .Remove "" }}
     <form name=remove method=POST>
+	<input type=hidden name=csrf value="{{$csrf}}" />
 		<input type=hidden name=appname value="{{.Remove}}" />
 		<input type=hidden name=remove value="true" />
     <h4>do you want to remove: {{.Remove}}
@@ -97,6 +102,7 @@
     {{end}}
     
 		<form method=POST enctype="multipart/form-data">
+	<input type=hidden name=csrf value="{{$csrf}}" />
 		<h3>Upload New/Update Application</h3>
 		Port <input type=text name=port size=20 /><br/>
 		<input type=checkbox name=shelf value=1 /> Upload to Shelf<br/><br/>

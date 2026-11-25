@@ -1,7 +1,14 @@
 package main
 
 import (
+	"crypto/rand"
+	"crypto/subtle"
+	"encoding/hex"
+	"fmt"
+	"strconv"
 	"strings"
+
+	"golang.org/x/crypto/scrypt"
 
 	"io/ioutil"
 	"os"
@@ -41,12 +48,64 @@ func saveUsersFile(usersList []string) (err error) {
 }
 
 func getPasswordHash(username, password string, isAdmin bool) (hash string) {
+	hashed, err := hashPassword(password)
+	if err == nil {
+		return hashed
+	}
+	return getPasswordHashLegacy(username, password, isAdmin)
+}
 
+func hashPassword(password string) (string, error) {
+	salt := make([]byte, 16)
+	if _, err := rand.Read(salt); err != nil {
+		return "", err
+	}
+	const n, r, p = 32768, 8, 1
+	derived, err := scrypt.Key([]byte(password), salt, n, r, p, 32)
+	if err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("$scrypt$%d$%d$%d$%s.%s", n, r, p, hex.EncodeToString(salt), hex.EncodeToString(derived)), nil
+}
+
+func verifyPassword(username, password string, isAdmin bool) bool {
+	found, storedHash, storedAdmin := getUserCredentials(username)
+	if !found || storedAdmin != isAdmin {
+		return false
+	}
+	if strings.HasPrefix(storedHash, "$scrypt$") {
+		parts := strings.Split(storedHash, "$")
+		if len(parts) != 6 {
+			return false
+		}
+		n, _ := strconv.Atoi(parts[2])
+		r, _ := strconv.Atoi(parts[3])
+		p, _ := strconv.Atoi(parts[4])
+		saltHash := strings.Split(parts[5], ".")
+		if len(saltHash) != 2 {
+			return false
+		}
+		salt, err := hex.DecodeString(saltHash[0])
+		if err != nil {
+			return false
+		}
+		expected, err := hex.DecodeString(saltHash[1])
+		if err != nil || len(expected) != 32 {
+			return false
+		}
+		derived, err := scrypt.Key([]byte(password), salt, n, r, p, 32)
+		return err == nil && subtle.ConstantTimeCompare(derived, expected) == 1
+	}
+
+	legacyHash := getPasswordHashLegacy(username, password, isAdmin)
+	return subtle.ConstantTimeCompare([]byte(storedHash), []byte(legacyHash)) == 1
+}
+
+func getPasswordHashLegacy(username, password string, isAdmin bool) string {
 	if !isAdmin {
 		username += "-"
 	}
-	hash = GetMD5Hash(password + username + "_!@")
-	return
+	return GetMD5Hash(password + username + "_!@")
 }
 
 func setUser(username, password string, isAdmin bool) (err error) {
